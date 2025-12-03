@@ -129,7 +129,7 @@
             if (midOpt === 'gentle') { midPeakingNode.Q.value = 0.5; setBandGain('mid', midPeakingNode, 4); }
             else { midPeakingNode.Q.value = 1.0; setBandGain('mid', midPeakingNode, 5); }
 
-            const hiMidOpt = document.querySelector('#group-hi-mid .switch-opt.active').dataset.opt;
+            const hiMidOpt = document.querySelector('#group-himid .switch-opt.active').dataset.opt;
             if (hiMidOpt === 'flipped') { hiMidPeakingNode.frequency.value = 2500; setBandGain('himid', hiMidPeakingNode, -3); }
             else { hiMidPeakingNode.frequency.value = 4000; setBandGain('himid', hiMidPeakingNode, 3); }
 
@@ -188,7 +188,7 @@
                     const midOpt = document.querySelector('#group-mid .switch-opt.active').dataset.opt;
                     oMidPeak.frequency.value = 800; oMidPeak.Q.value = (midOpt === 'gentle') ? 0.5 : 1.0; oMidPeak.gain.value = getGain('mid', (midOpt === 'gentle' ? 4 : 5));
 
-                    const hiMidOpt = document.querySelector('#group-hi-mid .switch-opt.active').dataset.opt;
+                    const hiMidOpt = document.querySelector('#group-himid .switch-opt.active').dataset.opt;
                     oHiMidPeak.frequency.value = (hiMidOpt === 'flipped') ? 2500 : 4000; oHiMidPeak.gain.value = getGain('himid', (hiMidOpt === 'flipped' ? -3 : 3));
 
                     const highOpt = document.querySelector('#group-high .switch-opt.active').dataset.opt;
