@@ -882,6 +882,9 @@
 
         // Update audio parameters
         function updateAudioParams() {
+            // Update coordinates display always
+            updateCoordinates();
+            
             if (!audioCtx) return;
 
             // Apply playback rate (time stretching)
@@ -897,9 +900,6 @@
             const mainVal = currentMainKnobVal;
             const gain = (mainVal / 50) * (mainVal / 50);
             outputGainNode.gain.setTargetAtTime(gain, audioCtx.currentTime, 0.015);
-
-            // Update coordinates display
-            updateCoordinates();
         }
 
         // Update dimensional coordinates
