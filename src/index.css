@@ -1,0 +1,20 @@
+@import "tailwindcss";
+
+@theme {
+  --color-brand-50: #eef6ff;
+  --color-brand-100: #d9ebff;
+  --color-brand-200: #b3d6ff;
+  --color-brand-300: #85bbff;
+  --color-brand-400: #569cff;
+  --color-brand-500: #2f7dff;
+  --color-brand-600: #1f63d6;
+  --color-brand-700: #174ca6;
+  --color-brand-800: #123a80;
+  --color-brand-900: #0d2b60;
+  
+  --shadow-soft: 0 10px 30px rgba(0,0,0,0.08);
+}
+
+:root { color-scheme: light dark; }
+html, body, #root { height: 100%; }
+
