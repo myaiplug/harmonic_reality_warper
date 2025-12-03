@@ -310,17 +310,10 @@
             const knob = document.getElementById(elementId);
             let isDragging = false, startY, startVal;
             
-            knob.addEventListener('mousedown', (e) => {
-                isDragging = true; startY = e.clientY;
-                startVal = parseFloat(knob.dataset.val || 50);
-                if (elementId === 'mainKnob') startVal = currentMainKnobVal;
-                document.body.style.cursor = 'ns-resize';
-                e.preventDefault();
-            });
-            window.addEventListener('mouseup', () => { if(isDragging) { isDragging = false; document.body.style.cursor = 'default'; updateAudioParams(); }});
-            window.addEventListener('mousemove', (e) => {
+            // Helper function to update knob value
+            function updateKnobValue(clientY) {
                 if (!isDragging) return;
-                const deltaY = startY - e.clientY;
+                const deltaY = startY - clientY;
                 let newVal = Math.max(0, Math.min(100, startVal + deltaY));
                 
                 if (elementId === 'mainKnob') {
@@ -337,7 +330,47 @@
                     if(valDisplay) valDisplay.style.transform = `translate(-50%, -50%) rotate(${-(newVal - 50) * 2.7}deg)`;
                 }
                 updateAudioParams();
+            }
+            
+            // Helper function to start dragging
+            function startDrag(clientY) {
+                isDragging = true;
+                startY = clientY;
+                startVal = parseFloat(knob.dataset.val || 50);
+                if (elementId === 'mainKnob') startVal = currentMainKnobVal;
+                document.body.style.cursor = 'ns-resize';
+            }
+            
+            // Helper function to end dragging
+            function endDrag() {
+                if(isDragging) {
+                    isDragging = false;
+                    document.body.style.cursor = 'default';
+                    updateAudioParams();
+                }
+            }
+            
+            // Mouse events
+            knob.addEventListener('mousedown', (e) => {
+                startDrag(e.clientY);
+                e.preventDefault();
             });
+            window.addEventListener('mouseup', endDrag);
+            window.addEventListener('mousemove', (e) => updateKnobValue(e.clientY));
+            
+            // Touch events
+            knob.addEventListener('touchstart', (e) => {
+                startDrag(e.touches[0].clientY);
+                e.preventDefault();
+            }, { passive: false });
+            window.addEventListener('touchend', endDrag);
+            window.addEventListener('touchcancel', endDrag);
+            window.addEventListener('touchmove', (e) => {
+                if (isDragging && e.touches.length > 0) {
+                    updateKnobValue(e.touches[0].clientY);
+                    e.preventDefault();
+                }
+            }, { passive: false });
         }
         setupKnob('mainKnob'); setupKnob('knob-lowpass'); setupKnob('knob-highpass'); setupKnob('knob-sat');
     
