@@ -306,72 +306,78 @@
         renderLoop();
 
         let currentMainKnobVal = 50;
+        let activeKnob = null;
+        let knobStartY = 0, knobStartVal = 0;
+        
         function setupKnob(elementId) {
             const knob = document.getElementById(elementId);
-            let isDragging = false, startY, startVal;
-            
-            // Helper function to update knob value
-            function updateKnobValue(clientY) {
-                if (!isDragging) return;
-                const deltaY = startY - clientY;
-                let newVal = Math.max(0, Math.min(100, startVal + deltaY));
-                
-                if (elementId === 'mainKnob') {
-                    currentMainKnobVal = newVal;
-                    knob.style.transform = `rotate(${(newVal - 50) * 2.7}deg)`;
-                } else {
-                    knob.dataset.val = Math.floor(newVal);
-                    const valDisplay = knob.querySelector('.mini-val-display');
-                    let displayVal = Math.floor(newVal);
-                    if(elementId === 'knob-lowpass') displayVal = Math.floor(20 + newVal * 4.8);
-                    if(elementId === 'knob-highpass') displayVal = Math.floor(2 + newVal * 0.2) + 'k';
-                    if(valDisplay) valDisplay.innerText = displayVal;
-                    knob.style.transform = `rotate(${(newVal - 50) * 2.7}deg)`;
-                    if(valDisplay) valDisplay.style.transform = `translate(-50%, -50%) rotate(${-(newVal - 50) * 2.7}deg)`;
-                }
-                updateAudioParams();
-            }
-            
-            // Helper function to start dragging
-            function startDrag(clientY) {
-                isDragging = true;
-                startY = clientY;
-                startVal = parseFloat(knob.dataset.val || 50);
-                if (elementId === 'mainKnob') startVal = currentMainKnobVal;
-                document.body.style.cursor = 'ns-resize';
-            }
-            
-            // Helper function to end dragging
-            function endDrag() {
-                if(isDragging) {
-                    isDragging = false;
-                    document.body.style.cursor = 'default';
-                    updateAudioParams();
-                }
-            }
             
             // Mouse events
             knob.addEventListener('mousedown', (e) => {
-                startDrag(e.clientY);
+                activeKnob = elementId;
+                knobStartY = e.clientY;
+                knobStartVal = parseFloat(knob.dataset.val || 50);
+                if (elementId === 'mainKnob') knobStartVal = currentMainKnobVal;
+                document.body.style.cursor = 'ns-resize';
                 e.preventDefault();
             });
-            window.addEventListener('mouseup', endDrag);
-            window.addEventListener('mousemove', (e) => updateKnobValue(e.clientY));
             
             // Touch events
             knob.addEventListener('touchstart', (e) => {
-                startDrag(e.touches[0].clientY);
+                activeKnob = elementId;
+                knobStartY = e.touches[0].clientY;
+                knobStartVal = parseFloat(knob.dataset.val || 50);
+                if (elementId === 'mainKnob') knobStartVal = currentMainKnobVal;
+                document.body.style.cursor = 'ns-resize';
                 e.preventDefault();
             }, { passive: false });
-            window.addEventListener('touchend', endDrag);
-            window.addEventListener('touchcancel', endDrag);
-            window.addEventListener('touchmove', (e) => {
-                if (isDragging && e.touches.length > 0) {
-                    updateKnobValue(e.touches[0].clientY);
-                    e.preventDefault();
-                }
-            }, { passive: false });
         }
+        
+        // Global mouse/touch move handler
+        function handleKnobMove(clientY) {
+            if (!activeKnob) return;
+            const knob = document.getElementById(activeKnob);
+            const deltaY = knobStartY - clientY;
+            let newVal = Math.max(0, Math.min(100, knobStartVal + deltaY));
+            
+            if (activeKnob === 'mainKnob') {
+                currentMainKnobVal = newVal;
+                knob.style.transform = `rotate(${(newVal - 50) * 2.7}deg)`;
+            } else {
+                knob.dataset.val = Math.floor(newVal);
+                const valDisplay = knob.querySelector('.mini-val-display');
+                let displayVal = Math.floor(newVal);
+                if(activeKnob === 'knob-lowpass') displayVal = Math.floor(20 + newVal * 4.8);
+                if(activeKnob === 'knob-highpass') displayVal = Math.floor(2 + newVal * 0.2) + 'k';
+                if(valDisplay) valDisplay.innerText = displayVal;
+                knob.style.transform = `rotate(${(newVal - 50) * 2.7}deg)`;
+                if(valDisplay) valDisplay.style.transform = `translate(-50%, -50%) rotate(${-(newVal - 50) * 2.7}deg)`;
+            }
+            updateAudioParams();
+        }
+        
+        // Global mouse/touch end handler
+        function handleKnobEnd() {
+            if (activeKnob) {
+                activeKnob = null;
+                document.body.style.cursor = 'default';
+                updateAudioParams();
+            }
+        }
+        
+        // Setup all knobs
         setupKnob('mainKnob'); setupKnob('knob-lowpass'); setupKnob('knob-highpass'); setupKnob('knob-sat');
+        
+        // Global event listeners (only once)
+        window.addEventListener('mouseup', handleKnobEnd);
+        window.addEventListener('mousemove', (e) => handleKnobMove(e.clientY));
+        window.addEventListener('touchend', handleKnobEnd);
+        window.addEventListener('touchcancel', handleKnobEnd);
+        window.addEventListener('touchmove', (e) => {
+            if (activeKnob && e.touches.length > 0) {
+                handleKnobMove(e.touches[0].clientY);
+                e.preventDefault();
+            }
+        }, { passive: false });
     
 
