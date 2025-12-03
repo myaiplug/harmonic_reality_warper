@@ -811,7 +811,7 @@
         let sourceNode, inputGainNode, outputGainNode, analyserNode;
         let isPlaying = false;
         let currentFileArrayBuffer = null;
-        let currentFile = null;
+        let currentBlobUrl = null; // Track blob URL for cleanup
         
         // State tracking
         let currentMainKnobVal = 50;
@@ -842,10 +842,15 @@
                 }
                 
                 try {
-                    currentFile = file;
                     currentFileArrayBuffer = await file.arrayBuffer();
-                    const blobUrl = URL.createObjectURL(file);
-                    audioElement.src = blobUrl;
+                    
+                    // Revoke old blob URL to prevent memory leak
+                    if (currentBlobUrl) {
+                        URL.revokeObjectURL(currentBlobUrl);
+                    }
+                    
+                    currentBlobUrl = URL.createObjectURL(file);
+                    audioElement.src = currentBlobUrl;
                     statusText.innerText = "PORTAL PRIMED";
                     if(isPlaying) togglePlay();
                 } catch (error) {
