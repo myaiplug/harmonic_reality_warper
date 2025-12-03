@@ -826,12 +826,30 @@
         fileInput.addEventListener('change', async function() {
             const file = this.files[0];
             if (file) {
-                currentFile = file;
-                currentFileArrayBuffer = await file.arrayBuffer();
-                const blobUrl = URL.createObjectURL(file);
-                audioElement.src = blobUrl;
-                statusText.innerText = "PORTAL PRIMED";
-                if(isPlaying) togglePlay(); 
+                // Validate file type and size
+                if (!file.type.startsWith('audio/')) {
+                    statusText.innerText = "ERROR: INVALID FILE TYPE";
+                    setTimeout(() => statusText.innerText = "PORTAL READY", 3000);
+                    return;
+                }
+                if (file.size > 100 * 1024 * 1024) { // 100MB limit
+                    statusText.innerText = "ERROR: FILE TOO LARGE";
+                    setTimeout(() => statusText.innerText = "PORTAL READY", 3000);
+                    return;
+                }
+                
+                try {
+                    currentFile = file;
+                    currentFileArrayBuffer = await file.arrayBuffer();
+                    const blobUrl = URL.createObjectURL(file);
+                    audioElement.src = blobUrl;
+                    statusText.innerText = "PORTAL PRIMED";
+                    if(isPlaying) togglePlay();
+                } catch (error) {
+                    console.error('File loading error:', error);
+                    statusText.innerText = "ERROR: FILE LOAD FAILED";
+                    setTimeout(() => statusText.innerText = "PORTAL READY", 3000);
+                }
             }
         });
 
@@ -860,7 +878,8 @@
         // Toggle play/pause
         async function togglePlay() {
             if (!audioElement.src) { 
-                alert("Load audio first."); 
+                statusText.innerText = "LOAD AUDIO FIRST";
+                setTimeout(() => statusText.innerText = "PORTAL READY", 2000);
                 return; 
             }
             if (!audioCtx) initAudio();
@@ -887,14 +906,22 @@
             
             if (!audioCtx) return;
 
-            // Apply playback rate (time stretching)
-            const timeShiftFactor = currentTimeShift / 100;
-            audioElement.playbackRate = timeShiftFactor;
-
-            // Apply pitch shifting (preserve playback rate with detune)
-            // Note: Web Audio API doesn't have native pitch shifting without affecting tempo
-            // We'll use a combination approach with detune compensation
-            const pitchShiftCents = currentPitchBend * 100; // semitones to cents
+            // Apply combined time stretching and pitch shifting
+            // Note: Native Web Audio API doesn't support independent pitch shifting without tempo change.
+            // For a production implementation, consider using libraries like:
+            // - soundtouch-js: Real-time pitch shifting
+            // - tone.js: Advanced audio manipulation
+            // - rubberband.js: High-quality time stretching and pitch shifting
+            // 
+            // Current implementation: Combines playback rate for time stretching.
+            // Pitch bend affects the playback rate proportionally.
+            const timeStretchFactor = currentTimeShift / 100;
+            const pitchShiftFactor = Math.pow(2, currentPitchBend / 12); // Convert semitones to frequency ratio
+            
+            // Combined rate: time stretch modified by pitch shift
+            // This means pitch and time are linked - a known limitation without advanced DSP
+            const combinedRate = timeStretchFactor * pitchShiftFactor;
+            audioElement.playbackRate = combinedRate;
             
             // Output gain
             const mainVal = currentMainKnobVal;
@@ -1189,7 +1216,8 @@
         // Download processed audio (offline rendering with pitch shift)
         async function downloadProcessedAudio() {
             if(!currentFileArrayBuffer) { 
-                alert("Load media first."); 
+                statusText.innerText = "LOAD AUDIO FIRST";
+                setTimeout(() => statusText.innerText = "PORTAL READY", 2000);
                 return; 
             }
             if(!audioCtx) initAudio();
@@ -1198,11 +1226,13 @@
             statusText.innerText = "RENDERING PORTAL...";
             
             try {
-                const audioBuffer = await audioCtx.decodeAudioData(currentFileArrayBuffer.slice(0));
+                const audioBuffer = await audioCtx.decodeAudioData(currentFileArrayBuffer);
                 
-                // Calculate new duration based on time stretch
+                // Calculate combined time stretch and pitch shift
                 const timeStretchFactor = currentTimeShift / 100;
-                const newLength = Math.floor(audioBuffer.length / timeStretchFactor);
+                const pitchShiftFactor = Math.pow(2, currentPitchBend / 12);
+                const combinedRate = timeStretchFactor * pitchShiftFactor;
+                const newLength = Math.floor(audioBuffer.length / combinedRate);
                 
                 const offlineCtx = new OfflineAudioContext(
                     audioBuffer.numberOfChannels, 
@@ -1212,7 +1242,7 @@
                 
                 const source = offlineCtx.createBufferSource();
                 source.buffer = audioBuffer;
-                source.playbackRate.value = timeStretchFactor;
+                source.playbackRate.value = combinedRate;
                 
                 const oOutputGain = offlineCtx.createGain();
                 const mainVal = currentMainKnobVal;
@@ -1238,8 +1268,9 @@
                 statusText.innerText = "EXPORT COMPLETE";
                 setTimeout(() => { statusText.innerText = prevStatus; }, 3000);
             } catch (e) {
-                console.error(e);
-                statusText.innerText = "RENDER ERROR";
+                console.error('Render error:', e);
+                statusText.innerText = `ERROR: ${e.message || 'RENDER FAILED'}`;
+                setTimeout(() => { statusText.innerText = prevStatus; }, 4000);
             }
         }
 
