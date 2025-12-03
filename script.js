@@ -361,7 +361,6 @@
             if (activeKnob) {
                 activeKnob = null;
                 document.body.style.cursor = 'default';
-                updateAudioParams();
             }
         }
         
@@ -375,8 +374,8 @@
         window.addEventListener('touchcancel', handleKnobEnd);
         window.addEventListener('touchmove', (e) => {
             if (activeKnob && e.touches.length > 0) {
-                handleKnobMove(e.touches[0].clientY);
                 e.preventDefault();
+                handleKnobMove(e.touches[0].clientY);
             }
         }, { passive: false });
     
