@@ -129,7 +129,7 @@
             if (midOpt === 'gentle') { midPeakingNode.Q.value = 0.5; setBandGain('mid', midPeakingNode, 4); }
             else { midPeakingNode.Q.value = 1.0; setBandGain('mid', midPeakingNode, 5); }
 
-            const hiMidOpt = document.querySelector('#group-hi-mid .switch-opt.active').dataset.opt;
+            const hiMidOpt = document.querySelector('#group-himid .switch-opt.active').dataset.opt;
             if (hiMidOpt === 'flipped') { hiMidPeakingNode.frequency.value = 2500; setBandGain('himid', hiMidPeakingNode, -3); }
             else { hiMidPeakingNode.frequency.value = 4000; setBandGain('himid', hiMidPeakingNode, 3); }
 
@@ -188,7 +188,7 @@
                     const midOpt = document.querySelector('#group-mid .switch-opt.active').dataset.opt;
                     oMidPeak.frequency.value = 800; oMidPeak.Q.value = (midOpt === 'gentle') ? 0.5 : 1.0; oMidPeak.gain.value = getGain('mid', (midOpt === 'gentle' ? 4 : 5));
 
-                    const hiMidOpt = document.querySelector('#group-hi-mid .switch-opt.active').dataset.opt;
+                    const hiMidOpt = document.querySelector('#group-himid .switch-opt.active').dataset.opt;
                     oHiMidPeak.frequency.value = (hiMidOpt === 'flipped') ? 2500 : 4000; oHiMidPeak.gain.value = getGain('himid', (hiMidOpt === 'flipped' ? -3 : 3));
 
                     const highOpt = document.querySelector('#group-high .switch-opt.active').dataset.opt;
@@ -306,39 +306,77 @@
         renderLoop();
 
         let currentMainKnobVal = 50;
+        let activeKnob = null;
+        let knobStartY = 0, knobStartVal = 0;
+        
         function setupKnob(elementId) {
             const knob = document.getElementById(elementId);
-            let isDragging = false, startY, startVal;
             
+            // Mouse events
             knob.addEventListener('mousedown', (e) => {
-                isDragging = true; startY = e.clientY;
-                startVal = parseFloat(knob.dataset.val || 50);
-                if (elementId === 'mainKnob') startVal = currentMainKnobVal;
+                activeKnob = elementId;
+                knobStartY = e.clientY;
+                knobStartVal = parseFloat(knob.dataset.val || 50);
+                if (elementId === 'mainKnob') knobStartVal = currentMainKnobVal;
                 document.body.style.cursor = 'ns-resize';
                 e.preventDefault();
             });
-            window.addEventListener('mouseup', () => { if(isDragging) { isDragging = false; document.body.style.cursor = 'default'; updateAudioParams(); }});
-            window.addEventListener('mousemove', (e) => {
-                if (!isDragging) return;
-                const deltaY = startY - e.clientY;
-                let newVal = Math.max(0, Math.min(100, startVal + deltaY));
-                
-                if (elementId === 'mainKnob') {
-                    currentMainKnobVal = newVal;
-                    knob.style.transform = `rotate(${(newVal - 50) * 2.7}deg)`;
-                } else {
-                    knob.dataset.val = Math.floor(newVal);
-                    const valDisplay = knob.querySelector('.mini-val-display');
-                    let displayVal = Math.floor(newVal);
-                    if(elementId === 'knob-lowpass') displayVal = Math.floor(20 + newVal * 4.8);
-                    if(elementId === 'knob-highpass') displayVal = Math.floor(2 + newVal * 0.2) + 'k';
-                    if(valDisplay) valDisplay.innerText = displayVal;
-                    knob.style.transform = `rotate(${(newVal - 50) * 2.7}deg)`;
-                    if(valDisplay) valDisplay.style.transform = `translate(-50%, -50%) rotate(${-(newVal - 50) * 2.7}deg)`;
-                }
-                updateAudioParams();
-            });
+            
+            // Touch events
+            knob.addEventListener('touchstart', (e) => {
+                activeKnob = elementId;
+                knobStartY = e.touches[0].clientY;
+                knobStartVal = parseFloat(knob.dataset.val || 50);
+                if (elementId === 'mainKnob') knobStartVal = currentMainKnobVal;
+                document.body.style.cursor = 'ns-resize';
+                e.preventDefault();
+            }, { passive: false });
         }
+        
+        // Global mouse/touch move handler
+        function handleKnobMove(clientY) {
+            if (!activeKnob) return;
+            const knob = document.getElementById(activeKnob);
+            const deltaY = knobStartY - clientY;
+            let newVal = Math.max(0, Math.min(100, knobStartVal + deltaY));
+            
+            if (activeKnob === 'mainKnob') {
+                currentMainKnobVal = newVal;
+                knob.style.transform = `rotate(${(newVal - 50) * 2.7}deg)`;
+            } else {
+                knob.dataset.val = Math.floor(newVal);
+                const valDisplay = knob.querySelector('.mini-val-display');
+                let displayVal = Math.floor(newVal);
+                if(activeKnob === 'knob-lowpass') displayVal = Math.floor(20 + newVal * 4.8);
+                if(activeKnob === 'knob-highpass') displayVal = Math.floor(2 + newVal * 0.2) + 'k';
+                if(valDisplay) valDisplay.innerText = displayVal;
+                knob.style.transform = `rotate(${(newVal - 50) * 2.7}deg)`;
+                if(valDisplay) valDisplay.style.transform = `translate(-50%, -50%) rotate(${-(newVal - 50) * 2.7}deg)`;
+            }
+            updateAudioParams();
+        }
+        
+        // Global mouse/touch end handler
+        function handleKnobEnd() {
+            if (activeKnob) {
+                activeKnob = null;
+                document.body.style.cursor = 'default';
+            }
+        }
+        
+        // Setup all knobs
         setupKnob('mainKnob'); setupKnob('knob-lowpass'); setupKnob('knob-highpass'); setupKnob('knob-sat');
+        
+        // Global event listeners (only once)
+        window.addEventListener('mouseup', handleKnobEnd);
+        window.addEventListener('mousemove', (e) => handleKnobMove(e.clientY));
+        window.addEventListener('touchend', handleKnobEnd);
+        window.addEventListener('touchcancel', handleKnobEnd);
+        window.addEventListener('touchmove', (e) => {
+            if (activeKnob && e.touches.length > 0) {
+                e.preventDefault();
+                handleKnobMove(e.touches[0].clientY);
+            }
+        }, { passive: false });
     
 
