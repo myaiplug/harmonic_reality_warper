@@ -1,0 +1,1335 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>MyAiPlugin - Temporal Pitch Portal™</title>
+    <style>
+        :root {
+            /* BRANDING & ACCENTS */
+            --accent-grad: linear-gradient(135deg, #00f2ff, #9d00ff);
+            --accent-cyan: #00f2ff;
+            --accent-purple: #9d00ff;
+            --accent-pink: #ff1493;
+            --accent-glow: rgba(0, 242, 255, 0.6);
+            --portal-primary: #00f2ff;
+            --portal-secondary: #9d00ff;
+            --portal-tertiary: #ff1493;
+
+            /* THEME VARIABLES (Default: Dark Mode) */
+            --bg-body: #0a0a0a;
+            --bg-gradient: radial-gradient(circle at center, #1f1f1f 0%, #000 100%);
+            
+            --faceplate-base: #2a2a2a;
+            --faceplate-grad: linear-gradient(180deg, #333 0%, #1a1a1a 100%);
+            --faceplate-border: #444;
+            --faceplate-shadow: rgba(0,0,0,0.8);
+            
+            --panel-inset: rgba(0,0,0,0.3);
+            --text-engraved: #888;
+            --text-active: #fff;
+            
+            --knob-body: #111;
+            --knob-cap: #333;
+            --knob-border: #000;
+            
+            --meter-bg: #000;
+            --meter-border: #444;
+
+            --metal-brush: repeating-linear-gradient(90deg, transparent 0, transparent 1px, rgba(255,255,255,0.02) 1px, rgba(255,255,255,0.02) 2px);
+        }
+
+        /* LIGHT MODE OVERRIDES */
+        body.light-mode {
+            --bg-body: #d0d0d0;
+            --bg-gradient: radial-gradient(circle at center, #f0f0f0 0%, #ccc 100%);
+            
+            --faceplate-base: #e0e0e0;
+            --faceplate-grad: linear-gradient(180deg, #f9f9f9 0%, #bfbfbf 100%);
+            --faceplate-border: #fff;
+            --faceplate-shadow: rgba(0,0,0,0.3);
+            
+            --panel-inset: rgba(255,255,255,0.5);
+            --text-engraved: #444;
+            --text-active: #000;
+            
+            --knob-body: #ddd;
+            --knob-cap: #f0f0f0;
+            --knob-border: #999;
+            
+            --meter-bg: #222;
+            --meter-border: #888;
+
+            --metal-brush: repeating-linear-gradient(90deg, transparent 0, transparent 1px, rgba(0,0,0,0.05) 1px, rgba(0,0,0,0.05) 2px);
+        }
+
+        * {
+            box-sizing: border-box;
+            user-select: none;
+        }
+
+        body {
+            margin: 0;
+            min-height: 100vh;
+            background-color: var(--bg-body);
+            background-image: var(--bg-gradient);
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            font-family: 'Helvetica Neue', Helvetica, Arial, sans-serif;
+            color: var(--text-engraved);
+            overflow-x: hidden;
+            transition: background 0.5s;
+            padding: 20px;
+        }
+
+        /* BRANDING HEADER */
+        .brand-header {
+            display: flex;
+            align-items: center;
+            justify-content: space-between;
+            margin-bottom: 20px;
+            padding-bottom: 15px;
+            border-bottom: 1px solid var(--faceplate-border);
+            box-shadow: 0 1px 0 rgba(255,255,255,0.05);
+        }
+        .brand-badge {
+            display: flex;
+            align-items: center;
+            gap: 12px;
+        }
+        .brand-icon {
+            width: 42px;
+            height: 42px;
+            border-radius: 8px;
+            background: var(--accent-grad);
+            box-shadow: 0 0 15px var(--accent-glow);
+            display: flex;
+            justify-content: center;
+            align-items: center;
+        }
+        .brand-icon svg {
+            width: 24px;
+            height: 24px;
+            fill: white;
+            filter: drop-shadow(0 2px 2px rgba(0,0,0,0.5));
+        }
+        .brand-info h1 {
+            margin: 0;
+            font-size: 18px;
+            background: var(--accent-grad);
+            -webkit-background-clip: text;
+            -webkit-text-fill-color: transparent;
+            background-clip: text;
+            font-weight: 800;
+            letter-spacing: 1px;
+            text-transform: uppercase;
+        }
+        .brand-info span {
+            font-size: 10px;
+            letter-spacing: 2px;
+            opacity: 0.8;
+            font-weight: 600;
+            color: var(--text-engraved);
+        }
+
+        /* Main Unit Faceplate */
+        .plugin-faceplate {
+            width: 1100px;
+            min-height: 1200px;
+            background-color: var(--faceplate-base);
+            background-image: 
+                var(--metal-brush),
+                var(--faceplate-grad);
+            border-radius: 16px;
+            box-shadow: 
+                0 0 0 1px #111,
+                0 30px 80px var(--faceplate-shadow),
+                inset 0 1px 0 rgba(255,255,255,0.3);
+            padding: 30px 40px;
+            display: flex;
+            flex-direction: column;
+            position: relative;
+            transition: background 0.5s;
+        }
+
+        /* Screws */
+        .screw {
+            position: absolute;
+            width: 16px;
+            height: 16px;
+            background: radial-gradient(circle at 30% 30%, #eee, #555);
+            border-radius: 50%;
+            border: 1px solid #222;
+            box-shadow: 0 2px 4px rgba(0,0,0,0.5);
+            z-index: 10;
+        }
+        .screw::before, .screw::after {
+            content: '';
+            position: absolute;
+            top: 50%; left: 50%;
+            background: #333;
+            transform: translate(-50%, -50%);
+        }
+        .screw::before { width: 8px; height: 2px; transform: translate(-50%, -50%) rotate(45deg); }
+        .screw::after { width: 8px; height: 2px; transform: translate(-50%, -50%) rotate(-45deg); }
+        
+        .screw.tl { top: 15px; left: 15px; }
+        .screw.tr { top: 15px; right: 15px; }
+        .screw.bl { bottom: 15px; left: 15px; }
+        .screw.br { bottom: 15px; right: 15px; }
+
+        /* THEME TOGGLE */
+        .theme-toggle {
+            position: absolute;
+            top: 25px;
+            right: 40px;
+            width: 40px;
+            height: 20px;
+            background: #111;
+            border-radius: 20px;
+            cursor: pointer;
+            border: 1px solid #555;
+            box-shadow: inset 0 2px 5px rgba(0,0,0,0.5);
+        }
+        .theme-toggle::after {
+            content: '';
+            position: absolute;
+            left: 2px; top: 2px;
+            width: 14px; height: 14px;
+            border-radius: 50%;
+            background: #fff;
+            transition: 0.3s;
+            box-shadow: 0 1px 3px rgba(0,0,0,0.5);
+        }
+        body.light-mode .theme-toggle { background: #ccc; }
+        body.light-mode .theme-toggle::after { left: 22px; background: #333; }
+
+        /* LCD / Control Area */
+        .lcd-panel {
+            background: var(--meter-bg);
+            border-radius: 6px;
+            border: 1px solid var(--faceplate-border);
+            height: 50px;
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            padding: 0 15px;
+            margin-bottom: 20px;
+            box-shadow: inset 0 5px 15px rgba(0,0,0,0.5);
+            position: relative;
+        }
+
+        .btn-metallic {
+            background: linear-gradient(to bottom, #444, #222);
+            color: #ccc;
+            border: 1px solid #000;
+            padding: 8px 14px;
+            font-size: 9px;
+            font-weight: 700;
+            border-radius: 3px;
+            cursor: pointer;
+            box-shadow: 0 2px 4px rgba(0,0,0,0.5), inset 0 1px 0 rgba(255,255,255,0.1);
+            text-transform: uppercase;
+            letter-spacing: 1px;
+            transition: all 0.2s;
+            position: relative;
+            overflow: hidden;
+        }
+        
+        .btn-metallic:hover, .btn-metallic.active-state {
+            background-image: linear-gradient(90deg, var(--accent-cyan), var(--accent-purple), var(--accent-cyan));
+            background-size: 200% 100%;
+            animation: sweepGradient 2s linear infinite;
+            color: #fff;
+            text-shadow: 0 0 5px rgba(255,255,255,0.8);
+            border-color: transparent;
+            box-shadow: 0 0 10px var(--accent-glow);
+        }
+
+        @keyframes sweepGradient {
+            0% { background-position: 0% 50%; }
+            100% { background-position: 100% 50%; }
+        }
+
+        .status-display {
+            font-family: 'Courier New', monospace;
+            color: var(--accent-cyan);
+            font-size: 11px;
+            text-transform: uppercase;
+            text-shadow: 0 0 5px var(--accent-glow);
+            letter-spacing: 1px;
+        }
+
+        input[type="file"] { display: none; }
+
+        /* PORTAL CENTERPIECE */
+        .portal-container {
+            width: 100%;
+            height: 500px;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            position: relative;
+            margin: 30px 0;
+            background: radial-gradient(circle at center, rgba(157, 0, 255, 0.1), transparent 70%);
+            border-radius: 12px;
+            overflow: hidden;
+        }
+
+        /* Portal canvas */
+        .portal-canvas {
+            position: absolute;
+            width: 100%;
+            height: 100%;
+            z-index: 1;
+        }
+
+        /* Dimensional Tear Effect */
+        .dimensional-tear {
+            position: absolute;
+            top: 50%;
+            left: 50%;
+            transform: translate(-50%, -50%);
+            width: 350px;
+            height: 350px;
+            z-index: 2;
+            pointer-events: none;
+        }
+
+        .tear-svg {
+            width: 100%;
+            height: 100%;
+            filter: drop-shadow(0 0 20px var(--portal-primary)) drop-shadow(0 0 40px var(--portal-secondary));
+        }
+
+        /* Main Control Area with 3 knobs */
+        .main-section {
+            display: flex;
+            align-items: center;
+            justify-content: space-between;
+            background: var(--panel-inset);
+            border-radius: 8px;
+            border: 1px solid rgba(255,255,255,0.05);
+            padding: 40px 60px;
+            height: 340px;
+            box-shadow: inset 0 0 20px rgba(0,0,0,0.2);
+            position: relative;
+            z-index: 3;
+        }
+
+        /* Knob containers */
+        .knob-container {
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            gap: 15px;
+        }
+
+        /* Side knobs (Time & Pitch) */
+        .side-knob-body {
+            width: 120px;
+            height: 120px;
+            border-radius: 50%;
+            background-color: var(--knob-body);
+            background-image: repeating-radial-gradient(transparent, transparent 2px, rgba(0,0,0,0.1) 3px);
+            box-shadow: 0 8px 16px rgba(0,0,0,0.5);
+            position: relative;
+            cursor: ns-resize;
+            transform: rotate(0deg);
+            border: 1px solid var(--knob-border);
+            transition: transform 0.1s ease-out;
+        }
+
+        .side-knob-cap {
+            position: absolute;
+            top: 12px;
+            left: 12px;
+            right: 12px;
+            bottom: 12px;
+            border-radius: 50%;
+            background: radial-gradient(circle at 30% 30%, var(--knob-cap), var(--knob-body));
+            box-shadow: 0 2px 5px rgba(0,0,0,0.4);
+            display: flex;
+            justify-content: center;
+            padding-top: 8px;
+        }
+
+        .side-knob-indicator {
+            width: 3px;
+            height: 30px;
+            background: var(--accent-cyan);
+            border-radius: 2px;
+            box-shadow: 0 0 5px var(--accent-glow);
+        }
+
+        .knob-label {
+            font-size: 10px;
+            font-weight: 800;
+            color: var(--text-engraved);
+            text-shadow: 0 1px 0 rgba(255,255,255,0.1);
+            text-transform: uppercase;
+            letter-spacing: 1.5px;
+        }
+
+        .knob-value {
+            font-family: 'Courier New', monospace;
+            font-size: 14px;
+            color: var(--accent-cyan);
+            text-shadow: 0 0 5px var(--accent-glow);
+            font-weight: bold;
+            min-width: 60px;
+            text-align: center;
+        }
+
+        /* Main center knob (larger) */
+        .knob-surround {
+            width: 200px;
+            height: 200px;
+            border-radius: 50%;
+            background: conic-gradient(#444, #777, #444, #666, #444);
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            box-shadow: 0 15px 40px rgba(0,0,0,0.6), inset 0 2px 5px rgba(255,255,255,0.3);
+            position: relative;
+        }
+
+        .main-knob-body {
+            width: 150px;
+            height: 150px;
+            border-radius: 50%;
+            background-color: var(--knob-body);
+            background-image: repeating-radial-gradient(transparent, transparent 2px, rgba(0,0,0,0.1) 3px);
+            box-shadow: 0 10px 20px rgba(0,0,0,0.5);
+            position: relative;
+            cursor: ns-resize;
+            transform: rotate(0deg);
+            z-index: 5;
+            border: 1px solid var(--knob-border);
+            transition: transform 0.1s ease-out;
+        }
+        
+        .knob-cap {
+            position: absolute;
+            top: 15px;
+            left: 15px;
+            right: 15px;
+            bottom: 15px;
+            border-radius: 50%;
+            background: radial-gradient(circle at 30% 30%, var(--knob-cap), var(--knob-body));
+            box-shadow: 0 2px 5px rgba(0,0,0,0.4);
+            display: flex;
+            justify-content: center;
+            padding-top: 10px;
+        }
+
+        .indicator-line {
+            width: 4px;
+            height: 35px;
+            background: var(--accent-purple);
+            border-radius: 2px;
+            box-shadow: 0 0 5px var(--accent-purple);
+        }
+
+        /* Dimensional Coordinates Panel */
+        .coordinates-panel {
+            background: rgba(0, 0, 0, 0.4);
+            border: 1px solid var(--faceplate-border);
+            border-radius: 8px;
+            padding: 20px;
+            margin: 20px 0;
+            box-shadow: inset 0 0 20px rgba(0, 0, 0, 0.5);
+        }
+
+        .coordinates-title {
+            font-size: 12px;
+            font-weight: 800;
+            color: var(--accent-cyan);
+            text-transform: uppercase;
+            letter-spacing: 2px;
+            margin-bottom: 15px;
+            text-align: center;
+            text-shadow: 0 0 10px var(--accent-glow);
+        }
+
+        .coordinates-grid {
+            display: grid;
+            grid-template-columns: repeat(2, 1fr);
+            gap: 15px;
+        }
+
+        .coordinate-item {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            padding: 8px 12px;
+            background: rgba(0, 0, 0, 0.3);
+            border-radius: 4px;
+            border: 1px solid rgba(0, 242, 255, 0.2);
+        }
+
+        .coordinate-label {
+            font-size: 9px;
+            color: var(--text-engraved);
+            text-transform: uppercase;
+            letter-spacing: 1px;
+        }
+
+        .coordinate-value {
+            font-family: 'Courier New', monospace;
+            font-size: 11px;
+            color: var(--accent-cyan);
+            text-shadow: 0 0 5px var(--accent-glow);
+        }
+
+        /* Warp Zones (Presets) */
+        .warp-zones {
+            margin: 20px 0;
+        }
+
+        .section-title {
+            font-size: 11px;
+            font-weight: 800;
+            color: var(--text-engraved);
+            text-transform: uppercase;
+            letter-spacing: 2px;
+            margin-bottom: 12px;
+            text-shadow: 0 1px 0 rgba(255,255,255,0.1);
+        }
+
+        .preset-grid {
+            display: grid;
+            grid-template-columns: repeat(5, 1fr);
+            gap: 10px;
+        }
+
+        .preset-btn {
+            padding: 12px 8px;
+            background: linear-gradient(to bottom, #333, #1a1a1a);
+            border: 1px solid #555;
+            border-radius: 6px;
+            color: var(--text-engraved);
+            font-size: 9px;
+            font-weight: 700;
+            text-transform: uppercase;
+            letter-spacing: 0.5px;
+            cursor: pointer;
+            transition: all 0.3s;
+            text-align: center;
+            box-shadow: 0 2px 4px rgba(0,0,0,0.5);
+        }
+
+        .preset-btn:hover, .preset-btn.active {
+            background: var(--accent-grad);
+            background-size: 200%;
+            animation: sweepGradient 2s linear infinite;
+            color: #fff;
+            border-color: var(--accent-cyan);
+            box-shadow: 0 0 15px var(--accent-glow);
+            transform: translateY(-2px);
+        }
+
+        /* ScrewAI Flavor Options */
+        .flavor-grid {
+            display: grid;
+            grid-template-columns: repeat(5, 1fr);
+            gap: 10px;
+        }
+
+        /* Dimensional Undo History */
+        .undo-history {
+            margin: 20px 0;
+            background: rgba(0, 0, 0, 0.3);
+            border: 1px solid var(--faceplate-border);
+            border-radius: 8px;
+            padding: 15px;
+        }
+
+        .history-timeline {
+            display: flex;
+            align-items: center;
+            gap: 8px;
+            overflow-x: auto;
+            padding: 10px 0;
+            min-height: 60px;
+        }
+
+        .history-bubble {
+            min-width: 50px;
+            height: 50px;
+            border-radius: 50%;
+            background: linear-gradient(135deg, var(--accent-cyan), var(--accent-purple));
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            justify-content: center;
+            font-size: 8px;
+            color: #fff;
+            cursor: pointer;
+            transition: all 0.3s;
+            box-shadow: 0 0 10px var(--accent-glow);
+            padding: 5px;
+            text-align: center;
+        }
+
+        .history-bubble:hover {
+            transform: scale(1.2);
+            box-shadow: 0 0 20px var(--accent-cyan);
+        }
+
+        .bubble-time {
+            font-weight: bold;
+            font-size: 9px;
+        }
+
+        .bubble-pitch {
+            font-size: 7px;
+            opacity: 0.9;
+        }
+
+        /* Particles animation */
+        @keyframes float {
+            0%, 100% { transform: translateY(0px) translateX(0px); }
+            25% { transform: translateY(-10px) translateX(5px); }
+            50% { transform: translateY(-5px) translateX(-5px); }
+            75% { transform: translateY(-15px) translateX(3px); }
+        }
+
+        .particle {
+            position: absolute;
+            width: 4px;
+            height: 4px;
+            background: var(--portal-primary);
+            border-radius: 50%;
+            opacity: 0.6;
+            animation: float 4s ease-in-out infinite;
+            box-shadow: 0 0 10px var(--portal-primary);
+        }
+
+        /* Portal rotation animation */
+        @keyframes portalRotate {
+            0% { transform: rotate(0deg); }
+            100% { transform: rotate(360deg); }
+        }
+
+        .engraved-label {
+            font-size: 9px;
+            font-weight: 800;
+            color: var(--text-engraved);
+            text-shadow: 0 1px 0 rgba(255,255,255,0.1);
+            text-transform: uppercase;
+            letter-spacing: 1px;
+        }
+    </style>
+</head>
+<body>
+
+    <div class="plugin-faceplate">
+        <!-- Decoration Screws -->
+        <div class="screw tl"></div>
+        <div class="screw tr"></div>
+        <div class="screw bl"></div>
+        <div class="screw br"></div>
+
+        <!-- Theme Toggle Switch -->
+        <div class="theme-toggle" onclick="document.body.classList.toggle('light-mode')" title="Toggle Light/Dark Mode"></div>
+
+        <!-- Branding Header -->
+        <div class="brand-header">
+            <div class="brand-badge">
+                <div class="brand-icon">
+                    <svg viewBox="0 0 24 24">
+                        <path d="M12,2A10,10 0 0,1 22,12A10,10 0 0,1 12,22A10,10 0 0,1 2,12A10,10 0 0,1 12,2M12,4A8,8 0 0,0 4,12A8,8 0 0,0 12,20A8,8 0 0,0 20,12A8,8 0 0,0 12,4M12,6A6,6 0 0,1 18,12A6,6 0 0,1 12,18A6,6 0 0,1 6,12A6,6 0 0,1 12,6M12,8A4,4 0 0,0 8,12A4,4 0 0,0 12,16A4,4 0 0,0 16,12A4,4 0 0,0 12,8Z"></path>
+                    </svg>
+                </div>
+                <div class="brand-info">
+                    <h1>MyAiPlugin</h1>
+                    <span>TEMPORAL PITCH PORTAL™</span>
+                </div>
+            </div>
+        </div>
+
+        <!-- LCD Panel -->
+        <div class="lcd-panel">
+            <div style="display: flex; gap: 10px;">
+                <button class="btn-metallic" onclick="document.getElementById('audioFile').click()">Load Audio</button>
+                <input type="file" id="audioFile" accept="audio/*">
+                <button class="btn-metallic" id="playBtn" onclick="togglePlay()">Engage Portal</button>
+                <button class="btn-metallic" id="downloadBtn" onclick="downloadProcessedAudio()">Export WAV</button>
+            </div>
+            <div class="status-display" id="statusText">PORTAL READY</div>
+        </div>
+
+        <!-- Hidden Audio -->
+        <audio id="audioElement" crossorigin="anonymous"></audio>
+
+        <!-- Portal Container with Canvas -->
+        <div class="portal-container" id="portalContainer">
+            <canvas class="portal-canvas" id="portalCanvas"></canvas>
+            
+            <!-- Dimensional Tear SVG -->
+            <div class="dimensional-tear">
+                <svg class="tear-svg" viewBox="0 0 200 200" xmlns="http://www.w3.org/2000/svg">
+                    <defs>
+                        <radialGradient id="portalGrad">
+                            <stop offset="0%" style="stop-color:#00f2ff;stop-opacity:0.8" />
+                            <stop offset="50%" style="stop-color:#9d00ff;stop-opacity:0.6" />
+                            <stop offset="100%" style="stop-color:#ff1493;stop-opacity:0.3" />
+                        </radialGradient>
+                        <filter id="glow">
+                            <feGaussianBlur stdDeviation="3" result="coloredBlur"/>
+                            <feMerge>
+                                <feMergeNode in="coloredBlur"/>
+                                <feMergeNode in="SourceGraphic"/>
+                            </feMerge>
+                        </filter>
+                    </defs>
+                    <!-- Tear shape - irregular portal -->
+                    <path id="tearPath" d="M 100,30 Q 130,40 140,70 Q 145,90 140,110 Q 130,140 110,160 Q 90,175 70,160 Q 50,140 55,110 Q 60,90 60,70 Q 65,40 100,30 Z" 
+                          fill="url(#portalGrad)" 
+                          stroke="#00f2ff" 
+                          stroke-width="2" 
+                          filter="url(#glow)"
+                          opacity="0.7">
+                        <animate attributeName="d" 
+                                 dur="4s" 
+                                 repeatCount="indefinite"
+                                 values="M 100,30 Q 130,40 140,70 Q 145,90 140,110 Q 130,140 110,160 Q 90,175 70,160 Q 50,140 55,110 Q 60,90 60,70 Q 65,40 100,30 Z;
+                                         M 100,25 Q 135,35 145,65 Q 150,85 145,110 Q 135,145 105,165 Q 85,180 65,165 Q 45,145 50,110 Q 55,85 55,65 Q 60,35 100,25 Z;
+                                         M 100,30 Q 130,40 140,70 Q 145,90 140,110 Q 130,140 110,160 Q 90,175 70,160 Q 50,140 55,110 Q 60,90 60,70 Q 65,40 100,30 Z"/>
+                    </path>
+                </svg>
+            </div>
+        </div>
+
+        <!-- Main Section with Three Knobs -->
+        <div class="main-section">
+            <!-- Time Shift Knob (Left) -->
+            <div class="knob-container">
+                <div class="knob-label">Time Shift</div>
+                <div class="side-knob-body" id="timeKnob" data-val="100">
+                    <div class="side-knob-cap">
+                        <div class="side-knob-indicator"></div>
+                    </div>
+                </div>
+                <div class="knob-value" id="timeValue">100%</div>
+            </div>
+
+            <!-- Master Output Knob (Center) -->
+            <div class="knob-container">
+                <div class="knob-label">Output</div>
+                <div class="knob-surround">
+                    <div class="main-knob-body" id="mainKnob">
+                        <div class="knob-cap">
+                            <div class="indicator-line"></div>
+                        </div>
+                    </div>
+                </div>
+                <div class="knob-value" id="outputValue">50%</div>
+            </div>
+
+            <!-- Pitch Bend Knob (Right) -->
+            <div class="knob-container">
+                <div class="knob-label">Pitch Bend</div>
+                <div class="side-knob-body" id="pitchKnob" data-val="0">
+                    <div class="side-knob-cap">
+                        <div class="side-knob-indicator"></div>
+                    </div>
+                </div>
+                <div class="knob-value" id="pitchValue">0 st</div>
+            </div>
+        </div>
+
+        <!-- Dimensional Coordinates Panel -->
+        <div class="coordinates-panel">
+            <div class="coordinates-title">⟡ Dimensional Coordinates ⟡</div>
+            <div class="coordinates-grid">
+                <div class="coordinate-item">
+                    <span class="coordinate-label">Pitch (semitones)</span>
+                    <span class="coordinate-value" id="coordPitch">0 st</span>
+                </div>
+                <div class="coordinate-item">
+                    <span class="coordinate-label">Temporal Pull</span>
+                    <span class="coordinate-value" id="coordTemporal">100%</span>
+                </div>
+                <div class="coordinate-item">
+                    <span class="coordinate-label">Drift (cents)</span>
+                    <span class="coordinate-value" id="coordDrift">0¢</span>
+                </div>
+                <div class="coordinate-item">
+                    <span class="coordinate-label">Speed Ripple</span>
+                    <span class="coordinate-value" id="coordRipple">1.00x</span>
+                </div>
+            </div>
+        </div>
+
+        <!-- Warp Zones (Presets) -->
+        <div class="warp-zones">
+            <div class="section-title">⊙ Warp Zones ⊙</div>
+            <div class="preset-grid">
+                <button class="preset-btn active" onclick="applyPreset('classic')">Classic Portal</button>
+                <button class="preset-btn" onclick="applyPreset('deep')">Deep Rift</button>
+                <button class="preset-btn" onclick="applyPreset('zero')">Zero Gravity</button>
+                <button class="preset-btn" onclick="applyPreset('wormhole')">Wormhole Clamp</button>
+                <button class="preset-btn" onclick="applyPreset('glass')">Glass Phase Portal</button>
+            </div>
+        </div>
+
+        <!-- ScrewAI-Style Flavor Options -->
+        <div class="warp-zones">
+            <div class="section-title">◈ ScrewAI Flavors ◈</div>
+            <div class="flavor-grid">
+                <button class="preset-btn" onclick="applyFlavor('slowed')">Slowed Portal</button>
+                <button class="preset-btn" onclick="applyFlavor('double')">Double Cup Dimension</button>
+                <button class="preset-btn" onclick="applyFlavor('houston')">Houston Rift</button>
+                <button class="preset-btn" onclick="applyFlavor('mane')">Mane Hold Time</button>
+                <button class="preset-btn" onclick="applyFlavor('astro')">Astro Portals</button>
+            </div>
+        </div>
+
+        <!-- Dimensional Undo History -->
+        <div class="undo-history">
+            <div class="section-title">∞ Dimensional History Timeline ∞</div>
+            <div class="history-timeline" id="historyTimeline">
+                <div class="history-bubble" onclick="undoToState(0)">
+                    <div class="bubble-time">100%</div>
+                    <div class="bubble-pitch">0 st</div>
+                </div>
+            </div>
+        </div>
+
+    </div>
+
+    <script>
+        // Constants
+        const MAX_FILE_SIZE = 100 * 1024 * 1024; // 100MB
+        const MAX_HISTORY_ITEMS = 20;
+        
+        // Audio context and nodes
+        let audioCtx;
+        let sourceNode, inputGainNode, outputGainNode, analyserNode;
+        let isPlaying = false;
+        let currentFileArrayBuffer = null;
+        let currentBlobUrl = null; // Track blob URL for cleanup
+        
+        // State tracking
+        let currentMainKnobVal = 50;
+        let currentTimeShift = 100; // 50-200%
+        let currentPitchBend = 0; // -12 to +12 semitones
+        let historyStates = [{time: 100, pitch: 0}];
+        let currentPreset = 'classic';
+
+        const audioElement = document.getElementById('audioElement');
+        const playBtn = document.getElementById('playBtn');
+        const statusText = document.getElementById('statusText');
+        const fileInput = document.getElementById('audioFile');
+
+        // File input handler
+        fileInput.addEventListener('change', async function() {
+            const file = this.files[0];
+            if (file) {
+                // Validate file type and size
+                if (!file.type.startsWith('audio/')) {
+                    statusText.innerText = "ERROR: INVALID FILE TYPE";
+                    setTimeout(() => statusText.innerText = "PORTAL READY", 3000);
+                    return;
+                }
+                if (file.size > MAX_FILE_SIZE) {
+                    statusText.innerText = "ERROR: FILE TOO LARGE";
+                    setTimeout(() => statusText.innerText = "PORTAL READY", 3000);
+                    return;
+                }
+                
+                try {
+                    currentFileArrayBuffer = await file.arrayBuffer();
+                    
+                    // Revoke old blob URL to prevent memory leak
+                    if (currentBlobUrl) {
+                        URL.revokeObjectURL(currentBlobUrl);
+                    }
+                    
+                    currentBlobUrl = URL.createObjectURL(file);
+                    audioElement.src = currentBlobUrl;
+                    statusText.innerText = "PORTAL PRIMED";
+                    if(isPlaying) togglePlay();
+                } catch (error) {
+                    console.error('File loading error:', error);
+                    statusText.innerText = "ERROR: FILE LOAD FAILED";
+                    setTimeout(() => statusText.innerText = "PORTAL READY", 3000);
+                }
+            }
+        });
+
+        // Initialize audio context
+        function initAudio() {
+            if (audioCtx) return;
+            const AudioContext = window.AudioContext || window.webkitAudioContext;
+            audioCtx = new AudioContext();
+
+            sourceNode = audioCtx.createMediaElementSource(audioElement);
+            inputGainNode = audioCtx.createGain();
+            outputGainNode = audioCtx.createGain();
+            analyserNode = audioCtx.createAnalyser();
+            analyserNode.fftSize = 256;
+            analyserNode.smoothingTimeConstant = 0.85;
+
+            // Connect nodes
+            sourceNode.connect(inputGainNode);
+            inputGainNode.connect(outputGainNode);
+            outputGainNode.connect(analyserNode);
+            outputGainNode.connect(audioCtx.destination);
+            
+            updateAudioParams();
+        }
+
+        // Toggle play/pause
+        async function togglePlay() {
+            if (!audioElement.src) { 
+                statusText.innerText = "LOAD AUDIO FIRST";
+                setTimeout(() => statusText.innerText = "PORTAL READY", 2000);
+                return; 
+            }
+            if (!audioCtx) initAudio();
+            if (audioCtx.state === 'suspended') await audioCtx.resume();
+
+            if (isPlaying) {
+                audioElement.pause();
+                playBtn.innerText = "ENGAGE PORTAL";
+                playBtn.classList.remove('active-state');
+                statusText.innerText = "PORTAL SUSPENDED";
+            } else {
+                audioElement.play();
+                playBtn.innerText = "DISENGAGE";
+                playBtn.classList.add('active-state');
+                statusText.innerText = "WARPING REALITY...";
+            }
+            isPlaying = !isPlaying;
+        }
+
+        // Update audio parameters
+        function updateAudioParams() {
+            // Update coordinates display always
+            updateCoordinates();
+            
+            if (!audioCtx) return;
+
+            // Apply combined time stretching and pitch shifting
+            // Note: Native Web Audio API doesn't support independent pitch shifting without tempo change.
+            // For a production implementation, consider using libraries like:
+            // - soundtouch-js: Real-time pitch shifting
+            // - tone.js: Advanced audio manipulation
+            // - rubberband.js: High-quality time stretching and pitch shifting
+            // 
+            // Current implementation: Combines playback rate for time stretching.
+            // Pitch bend affects the playback rate proportionally.
+            const timeStretchFactor = currentTimeShift / 100;
+            const pitchShiftFactor = Math.pow(2, currentPitchBend / 12); // Convert semitones to frequency ratio
+            
+            // Combined rate: time stretch modified by pitch shift
+            // This means pitch and time are linked - a known limitation without advanced DSP
+            const combinedRate = timeStretchFactor * pitchShiftFactor;
+            audioElement.playbackRate = combinedRate;
+            
+            // Output gain
+            const mainVal = currentMainKnobVal;
+            const gain = (mainVal / 50) * (mainVal / 50);
+            outputGainNode.gain.setTargetAtTime(gain, audioCtx.currentTime, 0.015);
+        }
+
+        // Update dimensional coordinates
+        function updateCoordinates() {
+            document.getElementById('coordPitch').innerText = currentPitchBend.toFixed(1) + ' st';
+            document.getElementById('coordTemporal').innerText = currentTimeShift.toFixed(0) + '%';
+            
+            // Calculate drift (micro variations based on pitch)
+            const drift = Math.round(currentPitchBend * 10);
+            document.getElementById('coordDrift').innerText = drift + '¢';
+            
+            // Speed ripple (doppler-like shift)
+            const ripple = (currentTimeShift / 100).toFixed(2);
+            document.getElementById('coordRipple').innerText = ripple + 'x';
+        }
+
+        // Add to history
+        function addToHistory() {
+            const state = {
+                time: currentTimeShift,
+                pitch: currentPitchBend
+            };
+            historyStates.push(state);
+            
+            const timeline = document.getElementById('historyTimeline');
+            const bubble = document.createElement('div');
+            bubble.className = 'history-bubble';
+            bubble.onclick = () => undoToState(historyStates.length - 1);
+            bubble.innerHTML = `
+                <div class="bubble-time">${Math.round(state.time)}%</div>
+                <div class="bubble-pitch">${state.pitch.toFixed(1)} st</div>
+            `;
+            timeline.appendChild(bubble);
+            
+            // Limit history to prevent memory issues
+            if (historyStates.length > MAX_HISTORY_ITEMS) {
+                historyStates.shift();
+                timeline.removeChild(timeline.firstChild);
+            }
+        }
+
+        // Undo to specific state
+        function undoToState(index) {
+            if (index >= 0 && index < historyStates.length) {
+                const state = historyStates[index];
+                currentTimeShift = state.time;
+                currentPitchBend = state.pitch;
+                
+                // Update knobs
+                updateKnobDisplay('timeKnob', currentTimeShift, 50, 200, currentTimeShift + '%');
+                updateKnobDisplay('pitchKnob', currentPitchBend, -12, 12, currentPitchBend.toFixed(1) + ' st');
+                
+                updateAudioParams();
+                updatePortalVisuals();
+            }
+        }
+
+        // Apply preset
+        function applyPreset(preset) {
+            // Remove active class from all presets
+            document.querySelectorAll('.preset-btn').forEach(btn => {
+                btn.classList.remove('active');
+            });
+            event.target.classList.add('active');
+            
+            currentPreset = preset;
+            
+            switch(preset) {
+                case 'classic':
+                    currentTimeShift = 100;
+                    currentPitchBend = 0;
+                    break;
+                case 'deep':
+                    currentTimeShift = 65;
+                    currentPitchBend = -5;
+                    break;
+                case 'zero':
+                    currentTimeShift = 150;
+                    currentPitchBend = 7;
+                    break;
+                case 'wormhole':
+                    currentTimeShift = 80;
+                    currentPitchBend = -8;
+                    break;
+                case 'glass':
+                    currentTimeShift = 120;
+                    currentPitchBend = 3;
+                    break;
+            }
+            
+            updateKnobDisplay('timeKnob', currentTimeShift, 50, 200, currentTimeShift + '%');
+            updateKnobDisplay('pitchKnob', currentPitchBend, -12, 12, currentPitchBend.toFixed(1) + ' st');
+            updateAudioParams();
+            updatePortalVisuals();
+            addToHistory();
+        }
+
+        // Apply flavor
+        function applyFlavor(flavor) {
+            switch(flavor) {
+                case 'slowed':
+                    currentTimeShift = 70;
+                    currentPitchBend = -3;
+                    break;
+                case 'double':
+                    currentTimeShift = 60;
+                    currentPitchBend = -6;
+                    break;
+                case 'houston':
+                    currentTimeShift = 75;
+                    currentPitchBend = -4;
+                    break;
+                case 'mane':
+                    currentTimeShift = 85;
+                    currentPitchBend = -2;
+                    break;
+                case 'astro':
+                    currentTimeShift = 130;
+                    currentPitchBend = 5;
+                    break;
+            }
+            
+            updateKnobDisplay('timeKnob', currentTimeShift, 50, 200, currentTimeShift + '%');
+            updateKnobDisplay('pitchKnob', currentPitchBend, -12, 12, currentPitchBend.toFixed(1) + ' st');
+            updateAudioParams();
+            updatePortalVisuals();
+            addToHistory();
+        }
+
+        // Helper function to update knob display
+        function updateKnobDisplay(knobId, value, min, max, displayText) {
+            const knob = document.getElementById(knobId);
+            const normalized = (value - min) / (max - min); // 0 to 1
+            const rotation = (normalized - 0.5) * 270; // -135 to +135 degrees
+            knob.style.transform = `rotate(${rotation}deg)`;
+            
+            if (knobId === 'timeKnob') {
+                document.getElementById('timeValue').innerText = displayText;
+            } else if (knobId === 'pitchKnob') {
+                document.getElementById('pitchValue').innerText = displayText;
+            }
+        }
+
+        // Setup knob interactions
+        function setupKnob(elementId, minVal, maxVal, defaultVal, updateFunc) {
+            const knob = document.getElementById(elementId);
+            let isDragging = false;
+            let startY;
+            let startVal;
+            
+            knob.addEventListener('mousedown', (e) => {
+                isDragging = true;
+                startY = e.clientY;
+                if (elementId === 'timeKnob') {
+                    startVal = currentTimeShift;
+                } else if (elementId === 'pitchKnob') {
+                    startVal = currentPitchBend;
+                } else if (elementId === 'mainKnob') {
+                    startVal = currentMainKnobVal;
+                }
+                document.body.style.cursor = 'ns-resize';
+                e.preventDefault();
+            });
+
+            window.addEventListener('mouseup', () => {
+                if (isDragging) {
+                    isDragging = false;
+                    document.body.style.cursor = 'default';
+                    if (elementId === 'timeKnob' || elementId === 'pitchKnob') {
+                        addToHistory();
+                    }
+                }
+            });
+
+            window.addEventListener('mousemove', (e) => {
+                if (!isDragging) return;
+                const deltaY = startY - e.clientY;
+                const sensitivity = (maxVal - minVal) / 200;
+                let newVal = startVal + (deltaY * sensitivity);
+                newVal = Math.max(minVal, Math.min(maxVal, newVal));
+                
+                updateFunc(newVal);
+                updatePortalVisuals();
+            });
+        }
+
+        // Update time knob
+        function updateTimeKnob(value) {
+            currentTimeShift = value;
+            const displayText = Math.round(value) + '%';
+            updateKnobDisplay('timeKnob', value, 50, 200, displayText);
+            updateAudioParams();
+        }
+
+        // Update pitch knob
+        function updatePitchKnob(value) {
+            currentPitchBend = value;
+            const displayText = value.toFixed(1) + ' st';
+            updateKnobDisplay('pitchKnob', value, -12, 12, displayText);
+            updateAudioParams();
+        }
+
+        // Update main output knob
+        function updateMainKnob(value) {
+            currentMainKnobVal = value;
+            const knob = document.getElementById('mainKnob');
+            knob.style.transform = `rotate(${(value - 50) * 2.7}deg)`;
+            document.getElementById('outputValue').innerText = Math.round(value) + '%';
+            updateAudioParams();
+        }
+
+        // Initialize knobs
+        setupKnob('timeKnob', 50, 200, 100, updateTimeKnob);
+        setupKnob('pitchKnob', -12, 12, 0, updatePitchKnob);
+        setupKnob('mainKnob', 0, 100, 50, updateMainKnob);
+
+        // Portal visualization
+        const portalCanvas = document.getElementById('portalCanvas');
+        const portalCtx = portalCanvas.getContext('2d');
+        
+        function initPortal() {
+            const container = document.getElementById('portalContainer');
+            portalCanvas.width = container.offsetWidth;
+            portalCanvas.height = container.offsetHeight;
+            
+            // Generate particles
+            for (let i = 0; i < 30; i++) {
+                const particle = document.createElement('div');
+                particle.className = 'particle';
+                particle.style.left = Math.random() * 100 + '%';
+                particle.style.top = Math.random() * 100 + '%';
+                particle.style.animationDelay = Math.random() * 4 + 's';
+                particle.style.animationDuration = (3 + Math.random() * 3) + 's';
+                container.appendChild(particle);
+            }
+        }
+
+        function updatePortalVisuals() {
+            const centerX = portalCanvas.width / 2;
+            const centerY = portalCanvas.height / 2;
+            
+            portalCtx.clearRect(0, 0, portalCanvas.width, portalCanvas.height);
+            
+            // Portal warp effect based on pitch and time
+            const warpFactor = 1 + (Math.abs(currentPitchBend) / 12) * 0.5;
+            const timeDistortion = currentTimeShift / 100;
+            
+            // Draw swirling portal rings
+            for (let i = 0; i < 8; i++) {
+                const radius = 50 + (i * 25) * warpFactor;
+                const alpha = 0.3 - (i * 0.03);
+                
+                portalCtx.beginPath();
+                portalCtx.arc(centerX, centerY, radius, 0, Math.PI * 2);
+                
+                const gradient = portalCtx.createRadialGradient(centerX, centerY, radius * 0.8, centerX, centerY, radius);
+                gradient.addColorStop(0, `rgba(0, 242, 255, ${alpha})`);
+                gradient.addColorStop(0.5, `rgba(157, 0, 255, ${alpha * 0.8})`);
+                gradient.addColorStop(1, `rgba(255, 20, 147, ${alpha * 0.5})`);
+                
+                portalCtx.strokeStyle = gradient;
+                portalCtx.lineWidth = 2 + (i * 0.5);
+                portalCtx.stroke();
+            }
+            
+            // Volumetric lighting effect
+            const lightGradient = portalCtx.createRadialGradient(centerX, centerY, 0, centerX, centerY, 200);
+            lightGradient.addColorStop(0, 'rgba(0, 242, 255, 0.2)');
+            lightGradient.addColorStop(0.5, 'rgba(157, 0, 255, 0.1)');
+            lightGradient.addColorStop(1, 'rgba(0, 0, 0, 0)');
+            
+            portalCtx.fillStyle = lightGradient;
+            portalCtx.fillRect(0, 0, portalCanvas.width, portalCanvas.height);
+        }
+
+        // Animation loop
+        function animatePortal() {
+            updatePortalVisuals();
+            requestAnimationFrame(animatePortal);
+        }
+
+        // Initialize
+        initPortal();
+        animatePortal();
+        updateCoordinates();
+
+        // Download processed audio (offline rendering with pitch shift)
+        async function downloadProcessedAudio() {
+            if(!currentFileArrayBuffer) { 
+                statusText.innerText = "LOAD AUDIO FIRST";
+                setTimeout(() => statusText.innerText = "PORTAL READY", 2000);
+                return; 
+            }
+            if(!audioCtx) initAudio();
+
+            const prevStatus = statusText.innerText;
+            statusText.innerText = "RENDERING PORTAL...";
+            
+            try {
+                const audioBuffer = await audioCtx.decodeAudioData(currentFileArrayBuffer);
+                
+                // Calculate combined time stretch and pitch shift
+                const timeStretchFactor = currentTimeShift / 100;
+                const pitchShiftFactor = Math.pow(2, currentPitchBend / 12);
+                const combinedRate = timeStretchFactor * pitchShiftFactor;
+                const newLength = Math.floor(audioBuffer.length / combinedRate);
+                
+                const offlineCtx = new OfflineAudioContext(
+                    audioBuffer.numberOfChannels, 
+                    newLength, 
+                    audioBuffer.sampleRate
+                );
+                
+                const source = offlineCtx.createBufferSource();
+                source.buffer = audioBuffer;
+                source.playbackRate.value = combinedRate;
+                
+                const oOutputGain = offlineCtx.createGain();
+                const mainVal = currentMainKnobVal;
+                oOutputGain.gain.value = (mainVal / 50) * (mainVal / 50);
+                
+                source.connect(oOutputGain);
+                oOutputGain.connect(offlineCtx.destination);
+                
+                source.start(0);
+                const renderedBuffer = await offlineCtx.startRendering();
+                
+                const wavBlob = bufferToWave(renderedBuffer, renderedBuffer.length);
+                const url = URL.createObjectURL(wavBlob);
+                const a = document.createElement('a');
+                a.style.display = 'none';
+                a.href = url;
+                a.download = "temporal_pitch_portal_output.wav";
+                document.body.appendChild(a);
+                a.click();
+                
+                window.URL.revokeObjectURL(url);
+                document.body.removeChild(a);
+                statusText.innerText = "EXPORT COMPLETE";
+                setTimeout(() => { statusText.innerText = prevStatus; }, 3000);
+            } catch (e) {
+                console.error('Render error:', e);
+                const errorMsg = e.message || e.toString() || 'RENDER FAILED';
+                statusText.innerText = `ERROR: ${errorMsg}`;
+                setTimeout(() => { statusText.innerText = prevStatus; }, 4000);
+            }
+        }
+
+        // Convert buffer to WAV
+        function bufferToWave(abuffer, len) {
+            let numOfChan = abuffer.numberOfChannels;
+            let length = len * numOfChan * 2 + 44;
+            let buffer = new ArrayBuffer(length);
+            let view = new DataView(buffer);
+            let channels = [];
+            let offset = 0;
+            
+            function setUint16(data) { 
+                view.setUint16(offset, data, true); 
+                offset += 2; 
+            }
+            function setUint32(data) { 
+                view.setUint32(offset, data, true); 
+                offset += 4; 
+            }
+            
+            setUint32(0x46464952); // "RIFF"
+            setUint32(length - 8);
+            setUint32(0x45564157); // "WAVE"
+            setUint32(0x20746d66); // "fmt "
+            setUint32(16);
+            setUint16(1);
+            setUint16(numOfChan);
+            setUint32(abuffer.sampleRate);
+            setUint32(abuffer.sampleRate * 2 * numOfChan);
+            setUint16(numOfChan * 2);
+            setUint16(16);
+            setUint32(0x61746164); // "data"
+            setUint32(length - offset - 4);
+            
+            for(let i = 0; i < abuffer.numberOfChannels; i++) {
+                channels.push(abuffer.getChannelData(i));
+            }
+            
+            for (let i = 0; i < len; i++) {
+                for (let ch = 0; ch < numOfChan; ch++) {
+                    let s = Math.max(-1, Math.min(1, channels[ch][i]));
+                    s = (s < 0 ? s * 0x8000 : s * 0x7FFF);
+                    view.setInt16(offset, s, true);
+                    offset += 2;
+                }
+            }
+            
+            return new Blob([buffer], { type: "audio/wav" });
+        }
+    </script>
+</body>
+</html>

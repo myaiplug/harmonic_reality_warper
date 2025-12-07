@@ -1,0 +1,537 @@
+
+        :root {
+            /* BRANDING & ACCENTS */
+            --accent-grad: linear-gradient(135deg, #00f2ff, #9d00ff);
+            --accent-cyan: #00f2ff;
+            --accent-purple: #9d00ff;
+            --accent-glow: rgba(0, 242, 255, 0.6);
+
+            /* THEME VARIABLES (Default: Dark Mode) */
+            --bg-body: #0a0a0a;
+            --bg-gradient: radial-gradient(circle at center, #1f1f1f 0%, #000 100%);
+            
+            --faceplate-base: #2a2a2a;
+            --faceplate-grad: linear-gradient(180deg, #333 0%, #1a1a1a 100%);
+            --faceplate-border: #444;
+            --faceplate-shadow: rgba(0,0,0,0.8);
+            
+            --panel-inset: rgba(0,0,0,0.3);
+            --text-engraved: #888;
+            --text-active: #fff;
+            
+            --knob-body: #111;
+            --knob-cap: #333;
+            --knob-border: #000;
+            
+            --meter-bg: #000;
+            --meter-border: #444;
+
+            --metal-brush: repeating-linear-gradient(90deg, transparent 0, transparent 1px, rgba(255,255,255,0.02) 1px, rgba(255,255,255,0.02) 2px);
+        }
+
+        /* LIGHT MODE OVERRIDES */
+        body.light-mode {
+            --bg-body: #d0d0d0;
+            --bg-gradient: radial-gradient(circle at center, #f0f0f0 0%, #ccc 100%);
+            
+            --faceplate-base: #e0e0e0;
+            --faceplate-grad: linear-gradient(180deg, #f9f9f9 0%, #bfbfbf 100%);
+            --faceplate-border: #fff;
+            --faceplate-shadow: rgba(0,0,0,0.3);
+            
+            --panel-inset: rgba(255,255,255,0.5);
+            --text-engraved: #444;
+            --text-active: #000;
+            
+            --knob-body: #ddd;
+            --knob-cap: #f0f0f0;
+            --knob-border: #999;
+            
+            --meter-bg: #222;
+            --meter-border: #888;
+
+            --metal-brush: repeating-linear-gradient(90deg, transparent 0, transparent 1px, rgba(0,0,0,0.05) 1px, rgba(0,0,0,0.05) 2px);
+        }
+
+        * {
+            box-sizing: border-box;
+            user-select: none;
+        }
+
+        body {
+            margin: 0;
+            height: 100vh;
+            background-color: var(--bg-body);
+            background-image: var(--bg-gradient);
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            font-family: 'Helvetica Neue', Helvetica, Arial, sans-serif;
+            color: var(--text-engraved);
+            overflow: hidden;
+            transition: background 0.5s;
+        }
+
+        /* BRANDING HEADER */
+        .brand-header {
+            display: flex;
+            align-items: center;
+            justify-content: space-between;
+            margin-bottom: 20px;
+            padding-bottom: 15px;
+            border-bottom: 1px solid var(--faceplate-border);
+            box-shadow: 0 1px 0 rgba(255,255,255,0.05);
+        }
+        .brand-badge {
+            display: flex;
+            align-items: center;
+            gap: 12px;
+        }
+        .brand-icon {
+            width: 42px;
+            height: 42px;
+            border-radius: 8px;
+            background: var(--accent-grad);
+            box-shadow: 0 0 15px var(--accent-glow);
+            display: flex;
+            justify-content: center;
+            align-items: center;
+        }
+        .brand-icon svg {
+            width: 24px;
+            height: 24px;
+            fill: white;
+            filter: drop-shadow(0 2px 2px rgba(0,0,0,0.5));
+        }
+        .brand-info h1 {
+            margin: 0;
+            font-size: 18px;
+            background: var(--accent-grad);
+            -webkit-background-clip: text;
+            -webkit-text-fill-color: transparent;
+            font-weight: 800;
+            letter-spacing: 1px;
+            text-transform: uppercase;
+        }
+        .brand-info span {
+            font-size: 10px;
+            letter-spacing: 2px;
+            opacity: 0.8;
+            font-weight: 600;
+            color: var(--text-engraved);
+        }
+
+        /* Main Unit Faceplate */
+        .plugin-faceplate {
+            width: 860px;
+            height: 940px;
+            background-color: var(--faceplate-base);
+            background-image: 
+                var(--metal-brush),
+                var(--faceplate-grad);
+            border-radius: 16px;
+            box-shadow: 
+                0 0 0 1px #111,
+                0 30px 80px var(--faceplate-shadow),
+                inset 0 1px 0 rgba(255,255,255,0.3);
+            padding: 30px 40px;
+            display: flex;
+            flex-direction: column;
+            position: relative;
+            transition: background 0.5s;
+        }
+
+        /* Screws */
+        .screw {
+            position: absolute;
+            width: 16px;
+            height: 16px;
+            background: radial-gradient(circle at 30% 30%, #eee, #555);
+            border-radius: 50%;
+            border: 1px solid #222;
+            box-shadow: 0 2px 4px rgba(0,0,0,0.5);
+            z-index: 10;
+        }
+        .screw::before, .screw::after {
+            content: '';
+            position: absolute;
+            top: 50%; left: 50%;
+            background: #333;
+            transform: translate(-50%, -50%);
+        }
+        .screw::before { width: 8px; height: 2px; transform: translate(-50%, -50%) rotate(45deg); }
+        .screw::after { width: 8px; height: 2px; transform: translate(-50%, -50%) rotate(-45deg); }
+        
+        .screw.tl { top: 15px; left: 15px; }
+        .screw.tr { top: 15px; right: 15px; }
+        .screw.bl { bottom: 15px; left: 15px; }
+        .screw.br { bottom: 15px; right: 15px; }
+
+        /* THEME TOGGLE */
+        .theme-toggle {
+            position: absolute;
+            top: 25px;
+            right: 40px;
+            width: 40px;
+            height: 20px;
+            background: #111;
+            border-radius: 20px;
+            cursor: pointer;
+            border: 1px solid #555;
+            box-shadow: inset 0 2px 5px rgba(0,0,0,0.5);
+        }
+        .theme-toggle::after {
+            content: '';
+            position: absolute;
+            left: 2px; top: 2px;
+            width: 14px; height: 14px;
+            border-radius: 50%;
+            background: #fff;
+            transition: 0.3s;
+            box-shadow: 0 1px 3px rgba(0,0,0,0.5);
+        }
+        body.light-mode .theme-toggle { background: #ccc; }
+        body.light-mode .theme-toggle::after { left: 22px; background: #333; }
+
+        /* LCD / Control Area */
+        .lcd-panel {
+            background: var(--meter-bg);
+            border-radius: 6px;
+            border: 1px solid var(--faceplate-border);
+            height: 50px;
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            padding: 0 15px;
+            margin-bottom: 20px;
+            box-shadow: inset 0 5px 15px rgba(0,0,0,0.5);
+            position: relative;
+        }
+
+        .btn-metallic {
+            background: linear-gradient(to bottom, #444, #222);
+            color: #ccc;
+            border: 1px solid #000;
+            padding: 8px 14px;
+            font-size: 9px;
+            font-weight: 700;
+            border-radius: 3px;
+            cursor: pointer;
+            box-shadow: 0 2px 4px rgba(0,0,0,0.5), inset 0 1px 0 rgba(255,255,255,0.1);
+            text-transform: uppercase;
+            letter-spacing: 1px;
+            transition: all 0.2s;
+            position: relative;
+            overflow: hidden;
+        }
+        
+        /* HOVER SWEEP EFFECT */
+        .btn-metallic:hover, .btn-metallic.active-state {
+            background-image: linear-gradient(90deg, var(--accent-cyan), var(--accent-purple), var(--accent-cyan));
+            background-size: 200% 100%;
+            animation: sweepGradient 2s linear infinite;
+            color: #fff;
+            text-shadow: 0 0 5px rgba(255,255,255,0.8);
+            border-color: transparent;
+            box-shadow: 0 0 10px var(--accent-glow);
+        }
+
+        @keyframes sweepGradient {
+            0% { background-position: 0% 50%; }
+            100% { background-position: 100% 50%; }
+        }
+
+        .status-display {
+            font-family: 'Courier New', monospace;
+            color: var(--accent-cyan);
+            font-size: 11px;
+            text-transform: uppercase;
+            text-shadow: 0 0 5px var(--accent-glow);
+            letter-spacing: 1px;
+        }
+
+        input[type="file"] { display: none; }
+
+        /* Spectrum Section */
+        .spectrum-frame {
+            padding: 8px;
+            background: var(--panel-inset);
+            border-radius: 6px;
+            border: 1px solid var(--faceplate-border);
+            box-shadow: inset 0 2px 5px rgba(0,0,0,0.2);
+            margin-bottom: 25px;
+        }
+        .spectrum-glass {
+            height: 140px;
+            background: #000;
+            border: 1px solid #333;
+            box-shadow: inset 0 0 20px rgba(0,0,0,0.9);
+            position: relative;
+            overflow: hidden;
+            display: flex;
+            align-items: flex-end;
+            padding: 0 4px;
+            gap: 2px;
+        }
+        .spectrum-glass::after {
+            content: '';
+            position: absolute;
+            inset: 0;
+            background: linear-gradient(135deg, rgba(255,255,255,0.05) 0%, transparent 40%);
+            pointer-events: none;
+            z-index: 10;
+        }
+
+        .bar {
+            flex: 1;
+            background: var(--accent-grad); /* GRADIENT BARS */
+            box-shadow: 0 0 5px var(--accent-purple);
+            opacity: 0.9;
+            border-top: 1px solid #fff;
+            transition: height 0.05s ease;
+            border-radius: 1px 1px 0 0;
+        }
+
+        /* Modules */
+        .modules-row {
+            display: flex;
+            justify-content: space-between;
+            margin-bottom: 25px;
+            background: var(--panel-inset);
+            border-radius: 6px;
+            padding: 15px;
+            border-bottom: 1px solid rgba(255,255,255,0.1);
+        }
+        
+        .module-group {
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            gap: 10px;
+            width: 22%;
+        }
+
+        .engraved-label {
+            font-size: 9px;
+            font-weight: 800;
+            color: var(--text-engraved);
+            text-shadow: 0 1px 0 rgba(255,255,255,0.1);
+            text-transform: uppercase;
+            letter-spacing: 1px;
+            margin-bottom: 2px;
+            transition: color 0.3s;
+        }
+
+        .metal-switch {
+            display: flex;
+            background: #999;
+            border-radius: 4px;
+            box-shadow: inset 0 2px 4px rgba(0,0,0,0.4);
+            padding: 2px;
+            cursor: pointer;
+        }
+        .switch-opt {
+            padding: 4px 8px;
+            font-size: 8px;
+            font-weight: bold;
+            color: #444;
+            text-transform: uppercase;
+            border-radius: 2px;
+            transition: all 0.2s;
+            text-align: center;
+            min-width: 45px;
+        }
+        .switch-opt.active {
+            background: #fff;
+            color: #000;
+            box-shadow: 0 1px 3px rgba(0,0,0,0.3);
+        }
+
+        /* Small Mute/Solo with Gradient Active */
+        .sm-ctrls { display: flex; gap: 6px; }
+        .led-btn {
+            width: 18px; height: 18px;
+            border-radius: 50%;
+            background: #333;
+            border: 1px solid #111;
+            box-shadow: 0 2px 3px rgba(0,0,0,0.5);
+            cursor: pointer;
+            display: flex; justify-content: center; align-items: center;
+            font-size: 8px; color: #666; font-weight: bold;
+            transition: all 0.2s;
+        }
+        .led-btn.active {
+            background-image: var(--accent-grad);
+            background-size: 200%;
+            animation: sweepGradient 2s linear infinite;
+            color: #fff;
+            box-shadow: 0 0 8px var(--accent-cyan);
+            border-color: #fff;
+        }
+
+        /* Main Control Area */
+        .main-section {
+            display: flex;
+            align-items: center;
+            justify-content: space-between;
+            background: var(--panel-inset);
+            border-radius: 8px;
+            border: 1px solid rgba(255,255,255,0.05);
+            padding: 20px 40px;
+            height: 280px;
+            box-shadow: inset 0 0 20px rgba(0,0,0,0.2);
+            position: relative;
+        }
+
+        /* Meter Housings - Fader Style */
+        .meter-housing {
+            background: var(--meter-bg);
+            padding: 8px;
+            border-radius: 4px;
+            border: 1px solid var(--meter-border);
+            box-shadow: inset 0 2px 10px rgba(0,0,0,0.8);
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            gap: 5px;
+        }
+        .meter-track {
+            width: 16px;
+            height: 180px;
+            background: #151515;
+            position: relative;
+            border-radius: 2px;
+            border: 1px solid #333;
+            box-shadow: inset 0 0 5px rgba(0,0,0,0.9);
+            overflow: hidden; /* Contains the fill */
+        }
+        
+        /* The "Slider" Fill */
+        .meter-val {
+            position: absolute; bottom: 0; left: 0; right: 0;
+            background: var(--accent-grad); /* Cyan to Purple */
+            height: 0%;
+            transition: height 0.05s;
+            opacity: 1;
+            box-shadow: 0 0 15px var(--accent-glow);
+        }
+        /* The Fader "Handle" Look */
+        .meter-val::after {
+            content: '';
+            position: absolute;
+            top: 0; left: 0; right: 0;
+            height: 6px;
+            background: #fff;
+            box-shadow: 0 0 10px #fff;
+            transform: translateY(-50%);
+        }
+
+        /* BIG MACHINED KNOB */
+        .knob-surround {
+            width: 200px; height: 200px;
+            border-radius: 50%;
+            background: conic-gradient(#444, #777, #444, #666, #444);
+            display: flex; justify-content: center; align-items: center;
+            box-shadow: 0 15px 40px rgba(0,0,0,0.6), inset 0 2px 5px rgba(255,255,255,0.3);
+            position: relative;
+        }
+        body.light-mode .knob-surround { background: conic-gradient(#ccc, #eee, #ccc, #aaa, #ccc); }
+
+        .main-knob-body {
+            width: 150px; height: 150px;
+            border-radius: 50%;
+            background-color: var(--knob-body);
+            background-image: repeating-radial-gradient(transparent, transparent 2px, rgba(0,0,0,0.1) 3px);
+            box-shadow: 0 10px 20px rgba(0,0,0,0.5);
+            position: relative;
+            cursor: ns-resize;
+            transform: rotate(0deg);
+            z-index: 5;
+            border: 1px solid var(--knob-border);
+        }
+        
+        .knob-cap {
+            position: absolute;
+            top: 15px; left: 15px; right: 15px; bottom: 15px;
+            border-radius: 50%;
+            background: radial-gradient(circle at 30% 30%, var(--knob-cap), var(--knob-body));
+            box-shadow: 0 2px 5px rgba(0,0,0,0.4);
+            display: flex; justify-content: center; padding-top: 10px;
+        }
+
+        .indicator-line {
+            width: 4px; height: 35px;
+            background: var(--accent-cyan);
+            border-radius: 2px;
+            box-shadow: 0 0 5px var(--accent-glow);
+        }
+
+        /* Bottom Section */
+        .bottom-rack {
+            display: flex; justify-content: space-evenly; align-items: flex-end;
+            padding-top: 20px; flex: 1;
+            background: rgba(0,0,0,0.1);
+            border-top: 1px solid var(--faceplate-border);
+            border-bottom-left-radius: 12px; border-bottom-right-radius: 12px;
+        }
+
+        .ctrl-group { display: flex; flex-direction: column; align-items: center; gap: 8px; }
+
+        .mini-knob {
+            width: 50px; height: 50px;
+            border-radius: 50%;
+            background: radial-gradient(circle at 30% 30%, #555, #222);
+            box-shadow: 0 4px 8px rgba(0,0,0,0.5);
+            position: relative; cursor: ns-resize;
+            border: 2px solid #111;
+        }
+        body.light-mode .mini-knob { background: radial-gradient(circle at 30% 30%, #eee, #999); border-color: #888; }
+
+        .mini-knob-line {
+            position: absolute; top: 4px; left: 50%; transform: translateX(-50%);
+            width: 2px; height: 16px; background: var(--accent-purple);
+            box-shadow: 0 0 4px var(--accent-purple);
+        }
+        .mini-val-display {
+            position: absolute; top: 50%; left: 50%; transform: translate(-50%, -50%);
+            font-size: 9px; color: #fff; font-weight: bold; pointer-events: none;
+            text-shadow: 0 0 2px #000;
+        }
+        body.light-mode .mini-val-display { color: #000; text-shadow: none; }
+
+        /* Toggle Vertical */
+        .toggle-switch-v {
+            width: 22px; height: 40px;
+            background: #222; border-radius: 4px; border: 1px solid #555;
+            position: relative; cursor: pointer;
+            box-shadow: inset 0 2px 5px rgba(0,0,0,0.8);
+        }
+        .toggle-lever {
+            width: 16px; height: 16px;
+            background: linear-gradient(to bottom, #ddd, #888);
+            border-radius: 2px; position: absolute; left: 2px; top: 2px;
+            box-shadow: 0 2px 3px rgba(0,0,0,0.6);
+            transition: top 0.15s cubic-bezier(0.4, 0.0, 0.2, 1);
+        }
+        .toggle-switch-v.active .toggle-lever {
+            top: 20px;
+            background: var(--accent-grad);
+            box-shadow: 0 0 8px var(--accent-glow);
+            border: 1px solid #fff;
+        }
+
+        .mode-select { display: flex; flex-direction: column; gap: 5px; }
+        .mode-btn {
+            background: transparent; color: var(--text-engraved);
+            font-size: 8px; padding: 3px 6px; border-radius: 2px; cursor: pointer;
+            border: 1px solid var(--text-engraved); text-align: center;
+            font-weight: 700;
+        }
+        .mode-btn.active {
+            background: var(--accent-grad); color: #fff; border-color: transparent;
+            background-size: 200%; animation: sweepGradient 3s linear infinite;
+            box-shadow: 0 0 5px var(--accent-cyan);
+        }
+
+    
+
