@@ -5,10 +5,18 @@ function ToggleThemeFab() {
   useEffect(() => {
     if (dark) {
       document.documentElement.classList.add('dark')
-      localStorage.setItem('theme', 'dark')
+      try {
+        localStorage.setItem('theme', 'dark')
+      } catch (e) {
+        // Ignore localStorage errors
+      }
     } else {
       document.documentElement.classList.remove('dark')
-      localStorage.setItem('theme', 'light')
+      try {
+        localStorage.setItem('theme', 'light')
+      } catch (e) {
+        // Ignore localStorage errors
+      }
     }
   }, [dark])
 
