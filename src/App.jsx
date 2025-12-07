@@ -250,8 +250,8 @@ function App() {
       <footer className="border-t border-black/5 dark:border-white/10 py-8 text-center text-sm text-neutral-600 dark:text-neutral-400">
         © <span>{new Date().getFullYear()}</span> MyAiPlug — All rights reserved. | 
         <a href="https://myaiplug.com" className="hover:text-brand-500 ml-2">More Tools</a> | 
-        <a href="#" className="hover:text-brand-500 ml-2">Privacy</a> | 
-        <a href="#" className="hover:text-brand-500 ml-2">Terms</a>
+        <a href="/privacy" className="hover:text-brand-500 ml-2">Privacy</a> | 
+        <a href="/terms" className="hover:text-brand-500 ml-2">Terms</a>
       </footer>
 
       <ToggleThemeFab />
