@@ -187,7 +187,7 @@ function App() {
               <li>• Community support</li>
               <li>• Standard export formats</li>
             </ul>
-            <a href="#" className="mt-6 inline-flex w-full justify-center rounded-xl bg-neutral-900 text-white dark:bg-white dark:text-neutral-900 h-10 leading-10 text-sm">
+            <a href="https://buy.stripe.com/test_starter" className="mt-6 inline-flex w-full justify-center rounded-xl bg-neutral-900 text-white dark:bg-white dark:text-neutral-900 h-10 leading-10 text-sm">
               Start Free
             </a>
           </div>
@@ -204,7 +204,7 @@ function App() {
               <li>• Priority processing</li>
               <li>• Batch operations</li>
             </ul>
-            <a href="#" className="mt-6 inline-flex w-full justify-center rounded-xl bg-brand-500 hover:bg-brand-600 text-white h-10 leading-10 text-sm">
+            <a href="https://buy.stripe.com/test_pro_29" className="mt-6 inline-flex w-full justify-center rounded-xl bg-brand-500 hover:bg-brand-600 text-white h-10 leading-10 text-sm">
               Upgrade to Pro
             </a>
           </div>
@@ -220,7 +220,7 @@ function App() {
               <li>• White-label exports</li>
               <li>• Dedicated support</li>
             </ul>
-            <a href="#" className="mt-6 inline-flex w-full justify-center rounded-xl bg-neutral-900 text-white dark:bg-white dark:text-neutral-900 h-10 leading-10 text-sm">
+            <a href="https://buy.stripe.com/test_studio_99" className="mt-6 inline-flex w-full justify-center rounded-xl bg-neutral-900 text-white dark:bg-white dark:text-neutral-900 h-10 leading-10 text-sm">
               Go Studio
             </a>
           </div>

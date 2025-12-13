@@ -60,7 +60,7 @@
 
         body {
             margin: 0;
-            height: 100vh;
+            min-height: 100vh;
             background-color: var(--bg-body);
             background-image: var(--bg-gradient);
             display: flex;
@@ -68,8 +68,9 @@
             align-items: center;
             font-family: 'Helvetica Neue', Helvetica, Arial, sans-serif;
             color: var(--text-engraved);
-            overflow: hidden;
+            overflow: auto;
             transition: background 0.5s;
+            padding: 20px 10px;
         }
 
         /* BRANDING HEADER */
@@ -123,8 +124,10 @@
 
         /* Main Unit Faceplate */
         .plugin-faceplate {
-            width: 860px;
-            height: 940px;
+            width: min(860px, 95vw);
+            max-width: 860px;
+            height: auto;
+            min-height: min(940px, 90vh);
             background-color: var(--faceplate-base);
             background-image: 
                 var(--metal-brush),
@@ -134,7 +137,7 @@
                 0 0 0 1px #111,
                 0 30px 80px var(--faceplate-shadow),
                 inset 0 1px 0 rgba(255,255,255,0.3);
-            padding: 30px 40px;
+            padding: clamp(20px, 3.5vw, 40px);
             display: flex;
             flex-direction: column;
             position: relative;
@@ -265,10 +268,10 @@
             border-radius: 6px;
             border: 1px solid var(--faceplate-border);
             box-shadow: inset 0 2px 5px rgba(0,0,0,0.2);
-            margin-bottom: 25px;
+            margin-bottom: clamp(15px, 3vh, 25px);
         }
         .spectrum-glass {
-            height: 140px;
+            height: clamp(100px, 15vh, 140px);
             background: #000;
             border: 1px solid #333;
             box-shadow: inset 0 0 20px rgba(0,0,0,0.9);
@@ -301,12 +304,14 @@
         /* Modules */
         .modules-row {
             display: flex;
+            flex-wrap: wrap;
             justify-content: space-between;
-            margin-bottom: 25px;
+            margin-bottom: clamp(15px, 3vh, 25px);
             background: var(--panel-inset);
             border-radius: 6px;
-            padding: 15px;
+            padding: clamp(10px, 2vw, 15px);
             border-bottom: 1px solid rgba(255,255,255,0.1);
+            gap: 10px;
         }
         
         .module-group {
@@ -314,11 +319,12 @@
             flex-direction: column;
             align-items: center;
             gap: 10px;
-            width: 22%;
+            flex: 1 1 calc(25% - 10px);
+            min-width: 140px;
         }
 
         .engraved-label {
-            font-size: 9px;
+            font-size: clamp(8px, 1.2vw, 9px);
             font-weight: 800;
             color: var(--text-engraved);
             text-shadow: 0 1px 0 rgba(255,255,255,0.1);
@@ -383,8 +389,9 @@
             background: var(--panel-inset);
             border-radius: 8px;
             border: 1px solid rgba(255,255,255,0.05);
-            padding: 20px 40px;
-            height: 280px;
+            padding: clamp(15px, 3vw, 40px);
+            height: auto;
+            min-height: clamp(220px, 30vh, 280px);
             box-shadow: inset 0 0 20px rgba(0,0,0,0.2);
             position: relative;
         }
@@ -403,7 +410,7 @@
         }
         .meter-track {
             width: 16px;
-            height: 180px;
+            height: clamp(140px, 20vh, 180px);
             background: #151515;
             position: relative;
             border-radius: 2px;
@@ -434,7 +441,8 @@
 
         /* BIG MACHINED KNOB */
         .knob-surround {
-            width: 200px; height: 200px;
+            width: clamp(150px, 20vw, 200px);
+            height: clamp(150px, 20vw, 200px);
             border-radius: 50%;
             background: conic-gradient(#444, #777, #444, #666, #444);
             display: flex; justify-content: center; align-items: center;
@@ -444,7 +452,7 @@
         body.light-mode .knob-surround { background: conic-gradient(#ccc, #eee, #ccc, #aaa, #ccc); }
 
         .main-knob-body {
-            width: 150px; height: 150px;
+            width: 75%; height: 75%;
             border-radius: 50%;
             background-color: var(--knob-body);
             background-image: repeating-radial-gradient(transparent, transparent 2px, rgba(0,0,0,0.1) 3px);
@@ -458,7 +466,7 @@
         
         .knob-cap {
             position: absolute;
-            top: 15px; left: 15px; right: 15px; bottom: 15px;
+            top: 10%; left: 10%; right: 10%; bottom: 10%;
             border-radius: 50%;
             background: radial-gradient(circle at 30% 30%, var(--knob-cap), var(--knob-body));
             box-shadow: 0 2px 5px rgba(0,0,0,0.4);
@@ -466,7 +474,8 @@
         }
 
         .indicator-line {
-            width: 4px; height: 35px;
+            width: 4px; 
+            height: clamp(25px, 4vw, 35px);
             background: var(--accent-cyan);
             border-radius: 2px;
             box-shadow: 0 0 5px var(--accent-glow);
