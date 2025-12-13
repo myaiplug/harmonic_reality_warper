@@ -84,7 +84,6 @@
             updateAudioParams(); 
         }
 
-         
         async function togglePlay() {
             if (!audioElement.src) { alert("Load media first."); return; }
             if (!audioCtx) initAudio();
@@ -248,7 +247,12 @@
         }
 
         function bufferToWave(abuffer, len) {
-            let numOfChan = abuffer.numberOfChannels, length = len * numOfChan * 2 + 44, buffer = new ArrayBuffer(length), view = new DataView(buffer), channels = [], offset = 0;
+            const numOfChan = abuffer.numberOfChannels;
+            const length = len * numOfChan * 2 + 44;
+            const buffer = new ArrayBuffer(length);
+            const view = new DataView(buffer);
+            const channels = [];
+            let offset = 0;
             function setUint16(data) { view.setUint16(offset, data, true); offset += 2; }
             function setUint32(data) { view.setUint32(offset, data, true); offset += 4; }
             setUint32(0x46464952); setUint32(length - 8); setUint32(0x45564157); setUint32(0x20746d66); setUint32(16); setUint16(1); setUint16(numOfChan);
@@ -271,7 +275,6 @@
             updateAudioParams();
         }
 
-         
         function toggleMute(band) {
             bands[band].mute = !bands[band].mute;
             const btn = document.querySelector('#group-'+band+' .led-btn.mute');
