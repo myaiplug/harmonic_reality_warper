@@ -616,10 +616,10 @@
         <div class="presets-section">
             <div class="section-title">◈ De-Gloss Presets ◈</div>
             <div class="preset-grid">
-                <button class="preset-btn active" onclick="applyPreset('gentle')">Gentle</button>
-                <button class="preset-btn" onclick="applyPreset('moderate')">Moderate</button>
-                <button class="preset-btn" onclick="applyPreset('aggressive')">Aggressive</button>
-                <button class="preset-btn" onclick="applyPreset('surgical')">Surgical</button>
+                <button class="preset-btn active" onclick="applyPreset('gentle', this)">Gentle</button>
+                <button class="preset-btn" onclick="applyPreset('moderate', this)">Moderate</button>
+                <button class="preset-btn" onclick="applyPreset('aggressive', this)">Aggressive</button>
+                <button class="preset-btn" onclick="applyPreset('surgical', this)">Surgical</button>
             </div>
         </div>
 
@@ -866,11 +866,11 @@
         }
 
         // Apply preset
-        function applyPreset(preset) {
-            document.querySelectorAll('.preset-btn').forEach(btn => {
-                btn.classList.remove('active');
+        function applyPreset(preset, btn) {
+            document.querySelectorAll('.preset-btn').forEach(b => {
+                b.classList.remove('active');
             });
-            event.target.classList.add('active');
+            if (btn) btn.classList.add('active');
             
             currentPreset = preset;
             
