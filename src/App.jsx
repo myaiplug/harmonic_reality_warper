@@ -7,14 +7,14 @@ function ToggleThemeFab() {
       document.documentElement.classList.add('dark')
       try {
         localStorage.setItem('theme', 'dark')
-      } catch (e) {
+      } catch {
         // Ignore localStorage errors
       }
     } else {
       document.documentElement.classList.remove('dark')
       try {
         localStorage.setItem('theme', 'light')
-      } catch (e) {
+      } catch {
         // Ignore localStorage errors
       }
     }
@@ -66,8 +66,8 @@ function App() {
                 The Harmonic Reality Warper revolutionizes audio-visual manipulation. Bend frequencies, twist timelines, and reshape dimensions—all with surgical AI precision. No plugins. No hassle. Just pure creative power.
               </p>
               <div className="mt-6 flex gap-3">
-                <a href="#features" className="rounded-xl bg-brand-500 hover:bg-brand-600 text-white text-sm px-4 h-11 leading-[44px]">Explore Features</a>
-                <a href="#pricing" className="rounded-xl border px-4 h-11 leading-[44px] text-sm text-neutral-700 dark:text-neutral-200 border-black/10 dark:border-white/10 hover:bg-neutral-50 dark:hover:bg-neutral-900">Start Free Trial</a>
+                <a href="/warper.html" className="rounded-xl bg-brand-500 hover:bg-brand-600 text-white text-sm px-4 h-11 leading-[44px]">Try Demo Now</a>
+                <a href="#features" className="rounded-xl border px-4 h-11 leading-[44px] text-sm text-neutral-700 dark:text-neutral-200 border-black/10 dark:border-white/10 hover:bg-neutral-50 dark:hover:bg-neutral-900">Explore Features</a>
               </div>
               <p className="mt-3 text-xs text-neutral-500 dark:text-neutral-400">Save hours with MyAiPlug workflows • One-click GenAI effects • No learning curve</p>
             </div>
@@ -187,7 +187,7 @@ function App() {
               <li>• Community support</li>
               <li>• Standard export formats</li>
             </ul>
-            <a href="#" className="mt-6 inline-flex w-full justify-center rounded-xl bg-neutral-900 text-white dark:bg-white dark:text-neutral-900 h-10 leading-10 text-sm">
+            <a href="https://buy.stripe.com/test_starter" className="mt-6 inline-flex w-full justify-center rounded-xl bg-neutral-900 text-white dark:bg-white dark:text-neutral-900 h-10 leading-10 text-sm">
               Start Free
             </a>
           </div>
@@ -204,7 +204,7 @@ function App() {
               <li>• Priority processing</li>
               <li>• Batch operations</li>
             </ul>
-            <a href="#" className="mt-6 inline-flex w-full justify-center rounded-xl bg-brand-500 hover:bg-brand-600 text-white h-10 leading-10 text-sm">
+            <a href="https://buy.stripe.com/test_pro_29" className="mt-6 inline-flex w-full justify-center rounded-xl bg-brand-500 hover:bg-brand-600 text-white h-10 leading-10 text-sm">
               Upgrade to Pro
             </a>
           </div>
@@ -220,7 +220,7 @@ function App() {
               <li>• White-label exports</li>
               <li>• Dedicated support</li>
             </ul>
-            <a href="#" className="mt-6 inline-flex w-full justify-center rounded-xl bg-neutral-900 text-white dark:bg-white dark:text-neutral-900 h-10 leading-10 text-sm">
+            <a href="https://buy.stripe.com/test_studio_99" className="mt-6 inline-flex w-full justify-center rounded-xl bg-neutral-900 text-white dark:bg-white dark:text-neutral-900 h-10 leading-10 text-sm">
               Go Studio
             </a>
           </div>

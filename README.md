@@ -1,17 +1,42 @@
 # Harmonic Reality Warper — MyAiPlug
 
-A stunning landing page for the Harmonic Reality Warper, built with the MyAiPlug design system.
+A professional audio processing tool with a stunning landing page, built with the MyAiPlug design system.
 
 ## Features
 
 - 🎨 **MyAiPlug Aesthetics**: Consistent branding with the MyAiPlug ecosystem
-- 🌓 **Dark Mode**: Beautiful light and dark themes with smooth transitions
+- 🌓 **Dark Mode**: Beautiful light and dark themes with smooth transitions on both landing page and warper tool
 - ⚡ **Fast & Modern**: Built with React + Vite + TailwindCSS v4
 - 📱 **Fully Responsive**: Looks great on all devices
 - 🚀 **Production Ready**: Optimized build and SEO-friendly
+- 🎛️ **Real-time Audio Processing**: Hardware-style audio processor with Web Audio API
+- 🎵 **Upload Your Audio**: Supports WAV, MP3, FLAC, and more audio formats
+- 📊 **Live Visualization**: Real-time spectrum analyzer and meters
+- 💾 **Export Processed Audio**: Download your processed audio as WAV files
+
+## Project Structure
+
+- **Landing Page** (`/` - React App): Marketing landing page with features, pricing, and call-to-action
+- **Warper Tool** (`/warper.html`): Professional audio processing interface
+
+## Audio Processing Features
+
+### Real-time Processing
+- Multi-band EQ (Low End, Mid Range, Presence, Air Band)
+- Saturation/Drive with 3 models (Tape, Tube, Transformer)
+- High-pass and Low-pass filters
+- Bypass mode for A/B comparison
+- Solo and Mute per frequency band
+- Real-time spectrum analysis and metering
+
+### Demo Mode
+- Try the interface without uploading audio
+- Download functionality is disabled in demo mode
+- Upload your own audio to unlock full export capabilities
 
 ## Design Highlights
 
+### Landing Page
 - **Top Menu Bar**: Sticky header with MyAiPlug logo (icon + text), navigation links, and CTA buttons
 - **Hero Section**: Compelling headline with emphasis on AI-powered harmonic warping
 - **Features Grid**: 6 key benefits with icons and descriptions highlighting time-saving workflows
@@ -20,14 +45,11 @@ A stunning landing page for the Harmonic Reality Warper, built with the MyAiPlug
 - **Call to Action**: Engaging final section with social proof
 - **Footer**: Clean footer with copyright and links
 
-## Marketing Copy
-
-The page emphasizes:
-- ⏱️ **Time Saved**: "Save hours with MyAiPlug workflows"
-- 🎯 **One-Click Effects**: "Pre-tuned GenAI workflows eliminate hours of tweaking"
-- 🔥 **No Learning Curve**: "Click once, get professional results instantly"
-- 💎 **Production Quality**: "From demo to master"
-- 🌐 **Ecosystem Integration**: "Seamlessly connects with StemSplit, ScrewAI, and our entire suite"
+### Warper Tool
+- **Hardware-inspired UI**: Realistic plugin faceplate design with metallic textures
+- **Interactive Controls**: Rotary knobs, switches, and toggles with smooth animations
+- **Visual Feedback**: LED indicators, spectrum analyzer, and VU meters
+- **Theme Toggle**: Switch between light and dark modes
 
 ## Getting Started
 
@@ -44,6 +66,24 @@ npm run build
 # Preview production build
 npm run preview
 ```
+
+## Usage
+
+1. Visit the landing page at `/`
+2. Click "Try Demo Now" to open the Harmonic Reality Warper
+3. Upload your audio file or test with the interface in demo mode
+4. Adjust EQ bands, drive, and filters to shape your sound
+5. Listen to the real-time preview
+6. Export your processed audio when ready
+
+## Marketing Copy
+
+The page emphasizes:
+- ⏱️ **Time Saved**: "Save hours with MyAiPlug workflows"
+- 🎯 **One-Click Effects**: "Pre-tuned GenAI workflows eliminate hours of tweaking"
+- 🔥 **No Learning Curve**: "Click once, get professional results instantly"
+- 💎 **Production Quality**: "From demo to master"
+- 🌐 **Ecosystem Integration**: "Seamlessly connects with StemSplit, ScrewAI, and our entire suite"
 
 ## Brand Colors
 
