@@ -21,6 +21,14 @@
         
         // Demo mode by default (no audio uploaded)
         let demoMode = true;
+        
+        // Initialize UI for demo mode
+        if (downloadBtn) {
+            downloadBtn.disabled = true;
+            downloadBtn.style.opacity = '0.4';
+            downloadBtn.style.cursor = 'not-allowed';
+        }
+        statusText.innerText = "DEMO MODE - UPLOAD AUDIO TO ENABLE DOWNLOAD";
 
         fileInput.addEventListener('change', async function() {
             const file = this.files[0];
