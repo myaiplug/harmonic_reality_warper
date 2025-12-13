@@ -7,14 +7,14 @@ function ToggleThemeFab() {
       document.documentElement.classList.add('dark')
       try {
         localStorage.setItem('theme', 'dark')
-      } catch (e) {
+      } catch {
         // Ignore localStorage errors
       }
     } else {
       document.documentElement.classList.remove('dark')
       try {
         localStorage.setItem('theme', 'light')
-      } catch (e) {
+      } catch {
         // Ignore localStorage errors
       }
     }

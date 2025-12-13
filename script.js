@@ -84,6 +84,7 @@
             updateAudioParams(); 
         }
 
+         
         async function togglePlay() {
             if (!audioElement.src) { alert("Load media first."); return; }
             if (!audioCtx) initAudio();
@@ -170,6 +171,7 @@
             outputGainNode.gain.setTargetAtTime(gain, audioCtx.currentTime, 0.1);
         }
 
+        // eslint-disable-next-line no-unused-vars
         async function downloadProcessedAudio() {
             // Prevent download in demo mode
             if(demoMode || !currentFileArrayBuffer) { 
@@ -246,7 +248,7 @@
         }
 
         function bufferToWave(abuffer, len) {
-            let numOfChan = abuffer.numberOfChannels, length = len * numOfChan * 2 + 44, buffer = new ArrayBuffer(length), view = new DataView(buffer), channels = [], sample, offset = 0;
+            let numOfChan = abuffer.numberOfChannels, length = len * numOfChan * 2 + 44, buffer = new ArrayBuffer(length), view = new DataView(buffer), channels = [], offset = 0;
             function setUint16(data) { view.setUint16(offset, data, true); offset += 2; }
             function setUint32(data) { view.setUint32(offset, data, true); offset += 4; }
             setUint32(0x46464952); setUint32(length - 8); setUint32(0x45564157); setUint32(0x20746d66); setUint32(16); setUint16(1); setUint16(numOfChan);
@@ -262,12 +264,14 @@
             return new Blob([buffer], { type: "audio/wav" });
         }
 
-        // --- UI Handlers ---
+        // --- UI Handlers (called from HTML onclick) ---
+        // eslint-disable-next-line no-unused-vars
         function togglePill(el, group) {
             el.querySelectorAll('.switch-opt').forEach(o => o.classList.toggle('active'));
             updateAudioParams();
         }
 
+         
         function toggleMute(band) {
             bands[band].mute = !bands[band].mute;
             const btn = document.querySelector('#group-'+band+' .led-btn.mute');
@@ -276,6 +280,7 @@
             updateAudioParams();
         }
 
+         
         function toggleSolo(band) {
             bands[band].solo = !bands[band].solo;
             const btn = document.querySelector('#group-'+band+' .led-btn.solo');
@@ -285,6 +290,7 @@
         }
 
         window.currentSatType = 'tube';
+        // eslint-disable-next-line no-unused-vars
         function setSatType(type, el) {
             window.currentSatType = type;
             document.querySelectorAll('.mode-btn').forEach(b => b.classList.remove('active'));
@@ -292,6 +298,7 @@
             updateAudioParams();
         }
 
+        // eslint-disable-next-line no-unused-vars
         function toggleBypass() {
             bypass = !bypass;
             const sw = document.getElementById('bypassSwitch');
