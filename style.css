@@ -225,6 +225,12 @@
             overflow: hidden;
         }
         
+        .btn-metallic:disabled {
+            opacity: 0.4;
+            cursor: not-allowed;
+            background: linear-gradient(to bottom, #333, #111);
+        }
+        
         /* HOVER SWEEP EFFECT */
         .btn-metallic:hover, .btn-metallic.active-state {
             background-image: linear-gradient(90deg, var(--accent-cyan), var(--accent-purple), var(--accent-cyan));

@@ -17,6 +17,10 @@
         const playBtn = document.getElementById('playBtn');
         const statusText = document.getElementById('statusText');
         const fileInput = document.getElementById('audioFile');
+        const downloadBtn = document.getElementById('downloadBtn');
+        
+        // Demo mode by default (no audio uploaded)
+        let demoMode = true;
 
         fileInput.addEventListener('change', async function() {
             const file = this.files[0];
@@ -25,6 +29,13 @@
                 const blobUrl = URL.createObjectURL(file);
                 audioElement.src = blobUrl;
                 statusText.innerText = "MEDIA LOADED";
+                
+                // Enable download button when audio is uploaded
+                demoMode = false;
+                downloadBtn.disabled = false;
+                downloadBtn.style.opacity = '1';
+                downloadBtn.style.cursor = 'pointer';
+                
                 if(isPlaying) togglePlay(); 
             }
         });
@@ -152,7 +163,11 @@
         }
 
         async function downloadProcessedAudio() {
-            if(!currentFileArrayBuffer) { alert("Load media first."); return; }
+            // Prevent download in demo mode
+            if(demoMode || !currentFileArrayBuffer) { 
+                alert("Please upload your own audio file to enable download."); 
+                return; 
+            }
             if(!audioCtx) initAudio();
 
             const prevStatus = statusText.innerText;

@@ -66,8 +66,8 @@ function App() {
                 The Harmonic Reality Warper revolutionizes audio-visual manipulation. Bend frequencies, twist timelines, and reshape dimensions—all with surgical AI precision. No plugins. No hassle. Just pure creative power.
               </p>
               <div className="mt-6 flex gap-3">
-                <a href="#features" className="rounded-xl bg-brand-500 hover:bg-brand-600 text-white text-sm px-4 h-11 leading-[44px]">Explore Features</a>
-                <a href="#pricing" className="rounded-xl border px-4 h-11 leading-[44px] text-sm text-neutral-700 dark:text-neutral-200 border-black/10 dark:border-white/10 hover:bg-neutral-50 dark:hover:bg-neutral-900">Start Free Trial</a>
+                <a href="/warper.html" className="rounded-xl bg-brand-500 hover:bg-brand-600 text-white text-sm px-4 h-11 leading-[44px]">Try Demo Now</a>
+                <a href="#features" className="rounded-xl border px-4 h-11 leading-[44px] text-sm text-neutral-700 dark:text-neutral-200 border-black/10 dark:border-white/10 hover:bg-neutral-50 dark:hover:bg-neutral-900">Explore Features</a>
               </div>
               <p className="mt-3 text-xs text-neutral-500 dark:text-neutral-400">Save hours with MyAiPlug workflows • One-click GenAI effects • No learning curve</p>
             </div>
