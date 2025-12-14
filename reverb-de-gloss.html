@@ -106,10 +106,10 @@
         const fileInputRef = React.useRef(null)
 
         // Constants for visualization and timing
-        const MIN_BAR_HEIGHT = 4
-        const MAX_BAR_HEIGHT = 100
-        const BAR_DECAY_RATE = 3
-        const MAX_DECAY_SECONDS = 2
+        const MIN_BAR_HEIGHT = 4          // Minimum bar height in percentage
+        const MAX_BAR_HEIGHT = 100        // Maximum bar height in percentage
+        const BAR_DECAY_RATE = 3          // Height reduction per bar index
+        const MAX_DECAY_SECONDS = 2       // Maximum decay time in seconds
 
         const presetValues = {
           gentle: { reduction: 25, decay: 40 },
@@ -117,6 +117,24 @@
           aggressive: { reduction: 75, decay: 60 },
           surgical: { reduction: 95, decay: 70 }
         }
+
+        // Utility function to capitalize first letter
+        const capitalize = (str) => str.charAt(0).toUpperCase() + str.slice(1)
+
+        // Memoize decay time display value
+        const decayTimeDisplay = React.useMemo(() => 
+          (decay / 100 * MAX_DECAY_SECONDS).toFixed(1) + 's',
+          [decay]
+        )
+
+        // Memoize bar heights for visualization
+        const barHeights = React.useMemo(() => {
+          return Array.from({length: 30}).map((_, i) => {
+            const baseHeight = Math.max(MIN_BAR_HEIGHT, MAX_BAR_HEIGHT - (i * BAR_DECAY_RATE))
+            const reducedHeight = baseHeight * (1 - reduction / 100)
+            return Math.max(MIN_BAR_HEIGHT, reducedHeight)
+          })
+        }, [reduction])
 
         // Cleanup blob URL on unmount
         useEffect(() => {
@@ -342,18 +360,13 @@
 
               {/* Reverb Visualizer */}
               <div className="reverb-bars">
-                {Array.from({length: 30}).map((_, i) => {
-                  const baseHeight = Math.max(MIN_BAR_HEIGHT, MAX_BAR_HEIGHT - (i * BAR_DECAY_RATE))
-                  const reducedHeight = baseHeight * (1 - reduction / 100)
-                  const finalHeight = Math.max(MIN_BAR_HEIGHT, reducedHeight)
-                  return (
-                    <div 
-                      key={i} 
-                      className="reverb-bar" 
-                      style={{height: `${finalHeight}%`}}
-                    />
-                  )
-                })}
+                {barHeights.map((height, i) => (
+                  <div 
+                    key={i} 
+                    className="reverb-bar" 
+                    style={{height: `${height}%`}}
+                  />
+                ))}
               </div>
 
               {/* Controls */}
@@ -394,7 +407,7 @@
                     onChange={(e) => setDecay(Number(e.target.value))}
                     className="slider"
                   />
-                  <div className="control-value">{(decay / 100 * MAX_DECAY_SECONDS).toFixed(1)}s</div>
+                  <div className="control-value">{decayTimeDisplay}</div>
                 </div>
               </div>
 
@@ -410,7 +423,7 @@
                       className={`demo-btn ${reverbType === type ? 'active' : ''}`}
                       onClick={() => setReverbType(type)}
                     >
-                      {type === 'auto' ? 'Auto Detect' : type.charAt(0).toUpperCase() + type.slice(1)}
+                      {type === 'auto' ? 'Auto Detect' : capitalize(type)}
                     </button>
                   ))}
                 </div>
@@ -428,7 +441,7 @@
                       className={`demo-btn ${preset === presetName ? 'active' : ''}`}
                       onClick={() => applyPreset(presetName)}
                     >
-                      {presetName.charAt(0).toUpperCase() + presetName.slice(1)}
+                      {capitalize(presetName)}
                     </button>
                   ))}
                 </div>
