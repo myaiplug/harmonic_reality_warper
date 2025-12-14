@@ -59,7 +59,7 @@
     <div id="root"></div>
 
     <script type="text/babel">
-      const { useState, useEffect } = React;
+      const { useState, useEffect, useMemo } = React;
 
       function ToggleThemeFab() {
         const [dark, setDark] = useState(document.documentElement.classList.contains('dark'))
@@ -122,13 +122,13 @@
         const capitalize = (str) => str.charAt(0).toUpperCase() + str.slice(1)
 
         // Memoize decay time display value
-        const decayTimeDisplay = React.useMemo(() => 
+        const decayTimeDisplay = useMemo(() => 
           (decay / 100 * MAX_DECAY_SECONDS).toFixed(1) + 's',
           [decay]
         )
 
         // Memoize bar heights for visualization
-        const barHeights = React.useMemo(() => {
+        const barHeights = useMemo(() => {
           return Array.from({length: 30}).map((_, i) => {
             const baseHeight = Math.max(MIN_BAR_HEIGHT, MAX_BAR_HEIGHT - (i * BAR_DECAY_RATE))
             const reducedHeight = baseHeight * (1 - reduction / 100)
