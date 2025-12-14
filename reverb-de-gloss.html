@@ -101,6 +101,7 @@
         const [reverbType, setReverbType] = useState('auto')
         const [preset, setPreset] = useState('gentle')
         const [audioFile, setAudioFile] = useState(null)
+        const [blobUrl, setBlobUrl] = useState(null)
         const audioRef = React.useRef(null)
         const audioCtxRef = React.useRef(null)
         const fileInputRef = React.useRef(null)
@@ -112,6 +113,15 @@
           surgical: { reduction: 95, decay: 70 }
         }
 
+        // Cleanup blob URL on unmount
+        useEffect(() => {
+          return () => {
+            if (blobUrl) {
+              URL.revokeObjectURL(blobUrl)
+            }
+          }
+        }, [blobUrl])
+
         const handleFileChange = (e) => {
           const file = e.target.files[0]
           if (file) {
@@ -120,15 +130,24 @@
               setTimeout(() => setStatus('SYSTEM READY'), 3000)
               return
             }
+            
+            // Revoke old blob URL if it exists
+            if (blobUrl) {
+              URL.revokeObjectURL(blobUrl)
+            }
+            
             setAudioFile(file)
             setStatus('AUDIO LOADED')
+            const newBlobUrl = URL.createObjectURL(file)
+            setBlobUrl(newBlobUrl)
+            
             if (audioRef.current) {
-              audioRef.current.src = URL.createObjectURL(file)
+              audioRef.current.src = newBlobUrl
             }
           }
         }
 
-        const togglePlay = () => {
+        const togglePlay = async () => {
           if (!audioRef.current || !audioFile) {
             setStatus('LOAD AUDIO FIRST')
             setTimeout(() => setStatus('SYSTEM READY'), 2000)
@@ -140,9 +159,16 @@
             setIsPlaying(false)
             setStatus('PAUSED')
           } else {
-            audioRef.current.play()
-            setIsPlaying(true)
-            setStatus('DE-GLOSSING...')
+            try {
+              await audioRef.current.play()
+              setIsPlaying(true)
+              setStatus('DE-GLOSSING...')
+            } catch (error) {
+              console.error('Playback failed:', error)
+              setStatus('ERROR: PLAYBACK FAILED')
+              setIsPlaying(false)
+              setTimeout(() => setStatus('SYSTEM READY'), 3000)
+            }
           }
         }
 
@@ -299,7 +325,7 @@
                 <div className="status-text">{status}</div>
               </div>
 
-              <audio ref={audioRef} crossOrigin="anonymous" />
+              <audio ref={audioRef} />
 
               {/* Reverb Visualizer */}
               <div className="reverb-bars">
