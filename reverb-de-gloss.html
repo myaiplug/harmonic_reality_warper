@@ -92,7 +92,315 @@
         )
       }
 
+      function DemoPlugin() {
+        const [isPlaying, setIsPlaying] = useState(false)
+        const [status, setStatus] = useState('SYSTEM READY')
+        const [reduction, setReduction] = useState(50)
+        const [output, setOutput] = useState(50)
+        const [decay, setDecay] = useState(50)
+        const [reverbType, setReverbType] = useState('auto')
+        const [preset, setPreset] = useState('gentle')
+        const [audioFile, setAudioFile] = useState(null)
+        const audioRef = React.useRef(null)
+        const audioCtxRef = React.useRef(null)
+        const fileInputRef = React.useRef(null)
+
+        const presetValues = {
+          gentle: { reduction: 25, decay: 40 },
+          moderate: { reduction: 50, decay: 50 },
+          aggressive: { reduction: 75, decay: 60 },
+          surgical: { reduction: 95, decay: 70 }
+        }
+
+        const handleFileChange = (e) => {
+          const file = e.target.files[0]
+          if (file) {
+            if (!file.type.startsWith('audio/')) {
+              setStatus('ERROR: INVALID FILE TYPE')
+              setTimeout(() => setStatus('SYSTEM READY'), 3000)
+              return
+            }
+            setAudioFile(file)
+            setStatus('AUDIO LOADED')
+            if (audioRef.current) {
+              audioRef.current.src = URL.createObjectURL(file)
+            }
+          }
+        }
+
+        const togglePlay = () => {
+          if (!audioRef.current || !audioFile) {
+            setStatus('LOAD AUDIO FIRST')
+            setTimeout(() => setStatus('SYSTEM READY'), 2000)
+            return
+          }
+
+          if (isPlaying) {
+            audioRef.current.pause()
+            setIsPlaying(false)
+            setStatus('PAUSED')
+          } else {
+            audioRef.current.play()
+            setIsPlaying(true)
+            setStatus('DE-GLOSSING...')
+          }
+        }
+
+        const applyPreset = (presetName) => {
+          setPreset(presetName)
+          const values = presetValues[presetName]
+          setReduction(values.reduction)
+          setDecay(values.decay)
+        }
+
+        return (
+          <div className="w-full max-w-5xl mx-auto">
+            <style>{`
+              .demo-container {
+                background: linear-gradient(180deg, #1a1a1a 0%, #0a0a0a 100%);
+                border-radius: 12px;
+                padding: 24px;
+                box-shadow: 0 20px 50px rgba(0,0,0,0.5);
+              }
+              .demo-btn {
+                background: linear-gradient(to bottom, #444, #222);
+                color: #ccc;
+                border: 1px solid #000;
+                padding: 8px 16px;
+                font-size: 11px;
+                font-weight: 700;
+                border-radius: 4px;
+                cursor: pointer;
+                text-transform: uppercase;
+                letter-spacing: 1px;
+                transition: all 0.2s;
+              }
+              .demo-btn:hover, .demo-btn.active {
+                background: linear-gradient(90deg, #00f2ff, #9d00ff);
+                color: #fff;
+                box-shadow: 0 0 15px rgba(0, 242, 255, 0.6);
+              }
+              .status-text {
+                font-family: 'Courier New', monospace;
+                color: #00f2ff;
+                font-size: 12px;
+                text-shadow: 0 0 5px rgba(0, 242, 255, 0.6);
+                letter-spacing: 1px;
+              }
+              .reverb-bars {
+                display: flex;
+                align-items: flex-end;
+                justify-content: space-around;
+                height: 150px;
+                gap: 2px;
+                background: rgba(0,0,0,0.3);
+                border-radius: 8px;
+                padding: 12px;
+                margin: 20px 0;
+              }
+              .reverb-bar {
+                flex: 1;
+                background: linear-gradient(to top, #00f2ff, #9d00ff);
+                border-radius: 2px;
+                transition: height 0.3s ease;
+                box-shadow: 0 0 10px rgba(0, 242, 255, 0.4);
+                min-height: 4px;
+              }
+              .control-section {
+                display: grid;
+                grid-template-columns: repeat(3, 1fr);
+                gap: 24px;
+                margin: 24px 0;
+                padding: 20px;
+                background: rgba(0,0,0,0.2);
+                border-radius: 8px;
+              }
+              .control-item {
+                text-align: center;
+              }
+              .control-label {
+                font-size: 11px;
+                font-weight: 800;
+                color: #888;
+                text-transform: uppercase;
+                letter-spacing: 1.5px;
+                margin-bottom: 8px;
+              }
+              .control-value {
+                font-family: 'Courier New', monospace;
+                font-size: 16px;
+                color: #00f2ff;
+                text-shadow: 0 0 5px rgba(0, 242, 255, 0.6);
+                font-weight: bold;
+                margin: 12px 0;
+              }
+              .slider {
+                width: 100%;
+                height: 6px;
+                border-radius: 3px;
+                background: #222;
+                outline: none;
+                -webkit-appearance: none;
+              }
+              .slider::-webkit-slider-thumb {
+                -webkit-appearance: none;
+                appearance: none;
+                width: 20px;
+                height: 20px;
+                border-radius: 50%;
+                background: linear-gradient(135deg, #00f2ff, #9d00ff);
+                cursor: pointer;
+                box-shadow: 0 0 10px rgba(0, 242, 255, 0.8);
+              }
+              .slider::-moz-range-thumb {
+                width: 20px;
+                height: 20px;
+                border-radius: 50%;
+                background: linear-gradient(135deg, #00f2ff, #9d00ff);
+                cursor: pointer;
+                box-shadow: 0 0 10px rgba(0, 242, 255, 0.8);
+                border: none;
+              }
+              .preset-grid {
+                display: grid;
+                grid-template-columns: repeat(4, 1fr);
+                gap: 12px;
+                margin: 20px 0;
+              }
+              .type-grid {
+                display: grid;
+                grid-template-columns: repeat(4, 1fr);
+                gap: 12px;
+                margin: 20px 0;
+              }
+            `}</style>
+            
+            <div className="demo-container">
+              {/* Control Panel */}
+              <div style={{display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '20px', padding: '16px', background: '#000', borderRadius: '6px'}}>
+                <div style={{display: 'flex', gap: '12px'}}>
+                  <input 
+                    ref={fileInputRef}
+                    type="file" 
+                    accept="audio/*" 
+                    onChange={handleFileChange}
+                    style={{display: 'none'}}
+                  />
+                  <button className="demo-btn" onClick={() => fileInputRef.current?.click()}>
+                    Load Audio
+                  </button>
+                  <button 
+                    className={`demo-btn ${isPlaying ? 'active' : ''}`}
+                    onClick={togglePlay}
+                  >
+                    {isPlaying ? 'Disengage' : 'Engage'}
+                  </button>
+                </div>
+                <div className="status-text">{status}</div>
+              </div>
+
+              <audio ref={audioRef} crossOrigin="anonymous" />
+
+              {/* Reverb Visualizer */}
+              <div className="reverb-bars">
+                {Array.from({length: 30}).map((_, i) => {
+                  const baseHeight = Math.max(4, 100 - (i * 3))
+                  const reducedHeight = baseHeight * (1 - reduction / 100)
+                  return (
+                    <div 
+                      key={i} 
+                      className="reverb-bar" 
+                      style={{height: `${Math.max(4, reducedHeight)}%`}}
+                    />
+                  )
+                })}
+              </div>
+
+              {/* Controls */}
+              <div className="control-section">
+                <div className="control-item">
+                  <div className="control-label">Reduction</div>
+                  <input 
+                    type="range" 
+                    min="0" 
+                    max="100" 
+                    value={reduction}
+                    onChange={(e) => setReduction(Number(e.target.value))}
+                    className="slider"
+                  />
+                  <div className="control-value">{reduction}%</div>
+                </div>
+
+                <div className="control-item">
+                  <div className="control-label">Output</div>
+                  <input 
+                    type="range" 
+                    min="0" 
+                    max="100" 
+                    value={output}
+                    onChange={(e) => setOutput(Number(e.target.value))}
+                    className="slider"
+                  />
+                  <div className="control-value">{output}%</div>
+                </div>
+
+                <div className="control-item">
+                  <div className="control-label">Decay Time</div>
+                  <input 
+                    type="range" 
+                    min="0" 
+                    max="100" 
+                    value={decay}
+                    onChange={(e) => setDecay(Number(e.target.value))}
+                    className="slider"
+                  />
+                  <div className="control-value">{(decay / 100 * 2).toFixed(1)}s</div>
+                </div>
+              </div>
+
+              {/* Reverb Type */}
+              <div style={{marginTop: '24px'}}>
+                <div style={{fontSize: '12px', fontWeight: '800', color: '#888', textTransform: 'uppercase', letterSpacing: '2px', marginBottom: '12px', textAlign: 'center'}}>
+                  ⊙ Reverb Type Detection ⊙
+                </div>
+                <div className="type-grid">
+                  {['auto', 'hall', 'plate', 'room'].map(type => (
+                    <button
+                      key={type}
+                      className={`demo-btn ${reverbType === type ? 'active' : ''}`}
+                      onClick={() => setReverbType(type)}
+                    >
+                      {type === 'auto' ? 'Auto Detect' : type.charAt(0).toUpperCase() + type.slice(1)}
+                    </button>
+                  ))}
+                </div>
+              </div>
+
+              {/* Presets */}
+              <div style={{marginTop: '24px'}}>
+                <div style={{fontSize: '12px', fontWeight: '800', color: '#888', textTransform: 'uppercase', letterSpacing: '2px', marginBottom: '12px', textAlign: 'center'}}>
+                  ◈ De-Gloss Presets ◈
+                </div>
+                <div className="preset-grid">
+                  {Object.keys(presetValues).map(presetName => (
+                    <button
+                      key={presetName}
+                      className={`demo-btn ${preset === presetName ? 'active' : ''}`}
+                      onClick={() => applyPreset(presetName)}
+                    >
+                      {presetName.charAt(0).toUpperCase() + presetName.slice(1)}
+                    </button>
+                  ))}
+                </div>
+              </div>
+            </div>
+          </div>
+        )
+      }
+
       function App() {
+        const [showModal, setShowModal] = useState(false)
+        
         return (
           <div className="min-h-full bg-gradient-to-b from-white to-neutral-50 dark:from-neutral-950 dark:to-neutral-900">
             {/* Header */}
@@ -127,8 +435,8 @@
                       The Reverb De-Gloss revolutionizes reverb removal with surgical AI precision. Transform muddy mixes into crystal-clear productions. Isolate the dry signal, eliminate room ambience, and reclaim sonic clarity—all with one-click processing.
                     </p>
                     <div className="mt-6 flex gap-3">
-                      <a href="#features" className="rounded-xl bg-brand-500 hover:bg-brand-600 text-white text-sm px-4 h-11 leading-[44px]">Explore Features</a>
-                      <a href="#pricing" className="rounded-xl border px-4 h-11 leading-[44px] text-sm text-neutral-700 dark:text-neutral-200 border-black/10 dark:border-white/10 hover:bg-neutral-50 dark:hover:bg-neutral-900">Start Free Trial</a>
+                      <button onClick={() => setShowModal(true)} className="rounded-xl bg-brand-500 hover:bg-brand-600 text-white text-sm px-4 h-11 leading-[44px]">Try Now - Interactive Demo</button>
+                      <a href="#features" className="rounded-xl border px-4 h-11 leading-[44px] text-sm text-neutral-700 dark:text-neutral-200 border-black/10 dark:border-white/10 hover:bg-neutral-50 dark:hover:bg-neutral-900">Explore Features</a>
                     </div>
                     <p className="mt-3 text-xs text-neutral-500 dark:text-neutral-400">Save hours with MyAiPlug workflows • One-click GenAI effects • No learning curve</p>
                   </div>
@@ -137,6 +445,67 @@
                       <div className="text-6xl">🎚️</div>
                     </div>
                     <div className="absolute inset-0 -z-10 blur-3xl opacity-50 bg-[radial-gradient(circle_at_70%_20%,rgba(47,125,255,0.35),transparent_40%)]" />
+                  </div>
+                </div>
+              </div>
+            </section>
+
+            {/* What is Reverb De-Gloss */}
+            <section className="max-w-7xl mx-auto px-4 sm:px-6 py-12 sm:py-16">
+              <div className="rounded-2xl bg-gradient-to-br from-brand-50 to-brand-100 dark:from-neutral-900 dark:to-neutral-800 border border-brand-200 dark:border-neutral-700 p-8 sm:p-12">
+                <h2 className="text-3xl font-bold text-neutral-900 dark:text-white mb-6">What is Reverb De-Gloss?</h2>
+                <div className="space-y-6 text-neutral-700 dark:text-neutral-300">
+                  <div>
+                    <h3 className="text-xl font-semibold text-neutral-900 dark:text-white mb-3">The Problem It Solves</h3>
+                    <p className="text-base leading-relaxed">
+                      Reverb is everywhere—recording spaces, vintage equipment, creative effects. But when you need a dry signal for remixing, sampling, or repurposing, that reverb becomes a problem. Traditional methods require destructive editing, complex spectral processing, or simply accepting the limitation. Until now.
+                    </p>
+                  </div>
+                  
+                  <div>
+                    <h3 className="text-xl font-semibold text-neutral-900 dark:text-white mb-3">What It Does</h3>
+                    <p className="text-base leading-relaxed mb-3">
+                      Reverb De-Gloss uses advanced AI-powered spectral analysis to identify and surgically remove reverb tails from audio recordings. It analyzes the unique characteristics of different reverb types—hall, plate, room, chamber—and intelligently separates the dry signal from the wet ambience.
+                    </p>
+                    <ul className="list-disc list-inside space-y-2 text-base">
+                      <li>Removes unwanted reverb while preserving audio quality</li>
+                      <li>Isolates dry signals from heavily processed recordings</li>
+                      <li>Recovers clarity from muddy or over-reverbed mixes</li>
+                      <li>Enables creative re-processing of legacy recordings</li>
+                      <li>Prepares stems for modern production workflows</li>
+                    </ul>
+                  </div>
+                  
+                  <div>
+                    <h3 className="text-xl font-semibold text-neutral-900 dark:text-white mb-3">What Sets It Apart</h3>
+                    <p className="text-base leading-relaxed mb-3">
+                      Unlike traditional noise gates, EQ filters, or destructive editing techniques, Reverb De-Gloss uses proprietary GenAI algorithms trained specifically for reverb removal. This is not spectral editing—it's intelligent audio restoration.
+                    </p>
+                    <div className="grid sm:grid-cols-2 gap-4 mt-4">
+                      <div className="bg-white dark:bg-neutral-800 rounded-lg p-4 border border-brand-200 dark:border-neutral-700">
+                        <h4 className="font-semibold text-neutral-900 dark:text-white mb-2">🧠 AI-Powered Analysis</h4>
+                        <p className="text-sm">Deep learning models trained on thousands of reverb types and acoustic spaces</p>
+                      </div>
+                      <div className="bg-white dark:bg-neutral-800 rounded-lg p-4 border border-brand-200 dark:border-neutral-700">
+                        <h4 className="font-semibold text-neutral-900 dark:text-white mb-2">⚡ Real-Time Processing</h4>
+                        <p className="text-sm">Process audio in seconds, not hours—optimized for modern production workflows</p>
+                      </div>
+                      <div className="bg-white dark:bg-neutral-800 rounded-lg p-4 border border-brand-200 dark:border-neutral-700">
+                        <h4 className="font-semibold text-neutral-900 dark:text-white mb-2">🎯 Selective Removal</h4>
+                        <p className="text-sm">Target specific reverb types while preserving natural room tone and character</p>
+                      </div>
+                      <div className="bg-white dark:bg-neutral-800 rounded-lg p-4 border border-brand-200 dark:border-neutral-700">
+                        <h4 className="font-semibold text-neutral-900 dark:text-white mb-2">💎 Quality Preservation</h4>
+                        <p className="text-sm">Maintains audio fidelity without artifacts, phasing, or frequency loss</p>
+                      </div>
+                    </div>
+                  </div>
+                  
+                  <div>
+                    <h3 className="text-xl font-semibold text-neutral-900 dark:text-white mb-3">Industry First</h3>
+                    <p className="text-base leading-relaxed">
+                      Reverb De-Gloss represents the first commercially available AI-powered reverb removal tool designed specifically for music production. While spectral editing and source separation technologies exist, no other solution combines GenAI training, real-time processing, and production-grade quality in a single, easy-to-use interface. This breakthrough makes previously impossible audio restoration tasks accessible to every producer, mixing engineer, and audio professional.
+                    </p>
                   </div>
                 </div>
               </div>
@@ -314,6 +683,43 @@
               <a href="/privacy" className="hover:text-brand-500 ml-2">Privacy</a> | 
               <a href="/terms" className="hover:text-brand-500 ml-2">Terms</a>
             </footer>
+
+            {/* Demo Modal */}
+            {showModal && (
+              <div className="fixed inset-0 z-50 overflow-y-auto">
+                <div className="flex items-center justify-center min-h-screen px-4 pt-4 pb-20 text-center sm:block sm:p-0">
+                  {/* Backdrop */}
+                  <div 
+                    className="fixed inset-0 transition-opacity bg-neutral-900 bg-opacity-75 backdrop-blur-sm" 
+                    onClick={() => setShowModal(false)}
+                  ></div>
+
+                  {/* Modal Panel */}
+                  <div className="inline-block align-bottom bg-white dark:bg-neutral-900 rounded-2xl text-left overflow-hidden shadow-xl transform transition-all sm:my-8 sm:align-middle sm:max-w-6xl sm:w-full border border-black/10 dark:border-white/10">
+                    {/* Header */}
+                    <div className="bg-gradient-to-r from-brand-500 to-brand-600 px-6 py-4 flex items-center justify-between">
+                      <div>
+                        <h3 className="text-xl font-bold text-white">Reverb De-Gloss Interactive Demo</h3>
+                        <p className="text-sm text-white/80 mt-1">Try the plugin live in your browser</p>
+                      </div>
+                      <button
+                        onClick={() => setShowModal(false)}
+                        className="text-white hover:text-neutral-200 transition-colors"
+                      >
+                        <svg className="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                          <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M6 18L18 6M6 6l12 12" />
+                        </svg>
+                      </button>
+                    </div>
+
+                    {/* Demo Content */}
+                    <div className="px-6 py-6 bg-neutral-50 dark:bg-neutral-950">
+                      <DemoPlugin />
+                    </div>
+                  </div>
+                </div>
+              </div>
+            )}
 
             <ToggleThemeFab />
           </div>
