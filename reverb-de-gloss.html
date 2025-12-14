@@ -106,6 +106,11 @@
         const audioCtxRef = React.useRef(null)
         const fileInputRef = React.useRef(null)
 
+        // Constants for visualization
+        const MIN_BAR_HEIGHT = 4
+        const MAX_BAR_HEIGHT = 100
+        const BAR_DECAY_RATE = 3
+
         const presetValues = {
           gentle: { reduction: 25, decay: 40 },
           moderate: { reduction: 50, decay: 50 },
@@ -143,6 +148,7 @@
             
             if (audioRef.current) {
               audioRef.current.src = newBlobUrl
+              audioRef.current.load()
             }
           }
         }
@@ -155,9 +161,16 @@
           }
 
           if (isPlaying) {
-            audioRef.current.pause()
-            setIsPlaying(false)
-            setStatus('PAUSED')
+            try {
+              audioRef.current.pause()
+              setIsPlaying(false)
+              setStatus('PAUSED')
+            } catch (error) {
+              console.error('Pause failed:', error)
+              setIsPlaying(false)
+              setStatus('ERROR: PAUSE FAILED')
+              setTimeout(() => setStatus('SYSTEM READY'), 3000)
+            }
           } else {
             try {
               await audioRef.current.play()
@@ -330,13 +343,13 @@
               {/* Reverb Visualizer */}
               <div className="reverb-bars">
                 {Array.from({length: 30}).map((_, i) => {
-                  const baseHeight = Math.max(4, 100 - (i * 3))
+                  const baseHeight = Math.max(MIN_BAR_HEIGHT, MAX_BAR_HEIGHT - (i * BAR_DECAY_RATE))
                   const reducedHeight = baseHeight * (1 - reduction / 100)
                   return (
                     <div 
                       key={i} 
                       className="reverb-bar" 
-                      style={{height: `${Math.max(4, reducedHeight)}%`}}
+                      style={{height: `${Math.max(MIN_BAR_HEIGHT, reducedHeight)}%`}}
                     />
                   )
                 })}
