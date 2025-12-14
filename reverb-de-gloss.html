@@ -103,13 +103,13 @@
         const [audioFile, setAudioFile] = useState(null)
         const [blobUrl, setBlobUrl] = useState(null)
         const audioRef = React.useRef(null)
-        const audioCtxRef = React.useRef(null)
         const fileInputRef = React.useRef(null)
 
-        // Constants for visualization
+        // Constants for visualization and timing
         const MIN_BAR_HEIGHT = 4
         const MAX_BAR_HEIGHT = 100
         const BAR_DECAY_RATE = 3
+        const MAX_DECAY_SECONDS = 2
 
         const presetValues = {
           gentle: { reduction: 25, decay: 40 },
@@ -345,11 +345,12 @@
                 {Array.from({length: 30}).map((_, i) => {
                   const baseHeight = Math.max(MIN_BAR_HEIGHT, MAX_BAR_HEIGHT - (i * BAR_DECAY_RATE))
                   const reducedHeight = baseHeight * (1 - reduction / 100)
+                  const finalHeight = Math.max(MIN_BAR_HEIGHT, reducedHeight)
                   return (
                     <div 
                       key={i} 
                       className="reverb-bar" 
-                      style={{height: `${Math.max(MIN_BAR_HEIGHT, reducedHeight)}%`}}
+                      style={{height: `${finalHeight}%`}}
                     />
                   )
                 })}
@@ -393,7 +394,7 @@
                     onChange={(e) => setDecay(Number(e.target.value))}
                     className="slider"
                   />
-                  <div className="control-value">{(decay / 100 * 2).toFixed(1)}s</div>
+                  <div className="control-value">{(decay / 100 * MAX_DECAY_SECONDS).toFixed(1)}s</div>
                 </div>
               </div>
 
