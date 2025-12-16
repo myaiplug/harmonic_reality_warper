@@ -2,6 +2,14 @@
 
 A professional audio processing tool with a stunning landing page, built with the MyAiPlug design system.
 
+## MyAiPlug Suite
+
+This repository includes multiple plugin landing pages and demos:
+
+- **Harmonic Reality Warper**: AI-powered harmonic warping and frequency manipulation
+- **Temporal Pitch Portal**: Time stretching and pitch shifting with dimensional effects
+- **Reverb De-Gloss**: AI-driven reverb removal for crystal-clear audio production
+
 ## Features
 
 - 🎨 **MyAiPlug Aesthetics**: Consistent branding with the MyAiPlug ecosystem
@@ -110,4 +118,25 @@ This serves as a template for creating new MyAiPlug.com pages with consistent br
 - Professional typography
 
 Perfect for quickly spinning up new tool pages in the MyAiPlug ecosystem!
+
+## Additional Plugin Pages
+
+### Reverb De-Gloss
+
+A complete landing page and interactive demo for AI-powered reverb removal:
+
+- **Landing Page**: `reverb-de-gloss.html` - Full marketing page with features, pricing, and CTAs
+- **Interactive Demo**: `reverb-de-gloss-demo.html` - Working audio processor with real-time controls
+- **Documentation**: `REVERB_DE_GLOSS.md` - Complete guide and technical details
+
+See [REVERB_DE_GLOSS.md](REVERB_DE_GLOSS.md) for full documentation.
+
+### Temporal Pitch Portal
+
+Time manipulation and pitch shifting interface:
+
+- **Demo**: `temporal-pitch-portal.html` - Full-featured audio time/pitch processor
+- **Documentation**: `TEMPORAL_PITCH_PORTAL.md` - Usage guide and features
+
+See [TEMPORAL_PITCH_PORTAL.md](TEMPORAL_PITCH_PORTAL.md) for details.
 
