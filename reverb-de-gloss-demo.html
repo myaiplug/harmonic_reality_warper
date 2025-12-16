@@ -247,6 +247,11 @@
             box-shadow: 0 0 10px var(--accent-glow);
         }
 
+        .button-group {
+            display: flex;
+            gap: 10px;
+        }
+
         @keyframes sweepGradient {
             0% { background-position: 0% 50%; }
             100% { background-position: 100% 50%; }
@@ -544,7 +549,7 @@
 
         <!-- LCD Panel -->
         <div class="lcd-panel">
-            <div style="display: flex; gap: 10px;">
+            <div class="button-group">
                 <button class="btn-metallic" onclick="document.getElementById('audioFile').click()">Load Audio</button>
                 <input type="file" id="audioFile" accept="audio/*">
                 <button class="btn-metallic" id="playBtn" onclick="togglePlay()">Engage</button>
@@ -635,6 +640,7 @@
         let isPlaying = false;
         let currentFileArrayBuffer = null;
         let currentBlobUrl = null;
+        let audioInitialized = false;
         
         // State tracking
         let currentMainKnobVal = 50;
@@ -704,29 +710,38 @@
 
         // Initialize audio context
         function initAudio() {
-            if (audioCtx) return;
-            const AudioContext = window.AudioContext || window.webkitAudioContext;
-            audioCtx = new AudioContext();
+            // Only create source node once, but allow audio context to be created
+            if (audioInitialized) return;
+            
+            if (!audioCtx) {
+                const AudioContext = window.AudioContext || window.webkitAudioContext;
+                audioCtx = new AudioContext();
+            }
 
-            sourceNode = audioCtx.createMediaElementSource(audioElement);
-            inputGainNode = audioCtx.createGain();
-            outputGainNode = audioCtx.createGain();
-            analyserNode = audioCtx.createAnalyser();
-            analyserNode.fftSize = 256;
-            analyserNode.smoothingTimeConstant = 0.85;
+            // Check if we've already created a source node for this audio element
+            if (!sourceNode) {
+                sourceNode = audioCtx.createMediaElementSource(audioElement);
+                inputGainNode = audioCtx.createGain();
+                outputGainNode = audioCtx.createGain();
+                analyserNode = audioCtx.createAnalyser();
+                analyserNode.fftSize = 256;
+                analyserNode.smoothingTimeConstant = 0.85;
 
-            // Create a simple high-pass filter to simulate reverb removal
-            // (Note: Real reverb removal would require advanced spectral processing)
-            const highpass = audioCtx.createBiquadFilter();
-            highpass.type = 'highpass';
-            highpass.frequency.value = 100;
+                // Create a simple high-pass filter to simulate reverb removal
+                // (Note: Real reverb removal would require advanced spectral processing)
+                const highpass = audioCtx.createBiquadFilter();
+                highpass.type = 'highpass';
+                highpass.frequency.value = 100;
 
-            // Connect nodes
-            sourceNode.connect(inputGainNode);
-            inputGainNode.connect(highpass);
-            highpass.connect(outputGainNode);
-            outputGainNode.connect(analyserNode);
-            outputGainNode.connect(audioCtx.destination);
+                // Connect nodes
+                sourceNode.connect(inputGainNode);
+                inputGainNode.connect(highpass);
+                highpass.connect(outputGainNode);
+                outputGainNode.connect(analyserNode);
+                outputGainNode.connect(audioCtx.destination);
+                
+                audioInitialized = true;
+            }
             
             updateAudioParams();
         }
