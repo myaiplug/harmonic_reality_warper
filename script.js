@@ -96,7 +96,8 @@
             flangerLFO.connect(flangerGain);
             flangerGain.connect(flangerDelay.delayTime);
             flangerDelay.connect(flangerMix);
-            flangerLFO.start();
+            // Start oscillator (safe because initAudio is only called after user interaction)
+            try { flangerLFO.start(); } catch { /* already started */ }
             window.flangerMixNode = flangerMix;
             window.flangerLFONode = flangerLFO;
             
@@ -243,6 +244,8 @@
                 const oHiMidPeak = offlineCtx.createBiquadFilter(); oHiMidPeak.type = "peaking";
                 const oHighShelf = offlineCtx.createBiquadFilter(); oHighShelf.type = "highshelf";
                 const oSubFilter = offlineCtx.createBiquadFilter(); oSubFilter.type = "lowshelf"; oSubFilter.frequency.value = 80;
+                // Note: Delay, reverb, and flanger are omitted from offline rendering for simplicity
+                // as they would require complex buffer manipulation. Only EQ, filters, and sub are exported.
 
                 if(bypass) {
                     oInputGain.gain.value = 1; oLowShelf.gain.value = 0; oMidPeak.gain.value = 0; oHiMidPeak.gain.value = 0; oHighShelf.gain.value = 0;
