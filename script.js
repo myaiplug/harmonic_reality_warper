@@ -1,7 +1,9 @@
 
         let audioCtx;
         let sourceNode, inputGainNode, outputGainNode, analyserNode;
-        let lowPassNode, highPassNode, satNode;
+        let lowPassNode, highPassNode;
+        let delayNode, reverbNode, subGainNode, flangerNode;
+        let flangerLFO, flangerDelay;
         let isPlaying = false, bypass = false;
         let currentFileArrayBuffer = null;
         
@@ -64,21 +66,63 @@
             hiMidPeakingNode = audioCtx.createBiquadFilter(); hiMidPeakingNode.type = "peaking"; hiMidPeakingNode.frequency.value = 3000;
             highShelfNode = audioCtx.createBiquadFilter(); highShelfNode.type = "highshelf"; highShelfNode.frequency.value = 8000;
 
-            satNode = audioCtx.createWaveShaper();
-            satNode.curve = makeDistortionCurve(0); satNode.oversample = '4x';
+            // New effects
+            delayNode = audioCtx.createDelay(2.0); delayNode.delayTime.value = 0;
+            const delayFeedback = audioCtx.createGain(); delayFeedback.gain.value = 0.3;
+            const delayMix = audioCtx.createGain(); delayMix.gain.value = 0;
+            delayNode.connect(delayFeedback); delayFeedback.connect(delayNode);
+            delayNode.connect(delayMix);
+            window.delayMixNode = delayMix;
+            
+            reverbNode = audioCtx.createConvolver();
+            const reverbMix = audioCtx.createGain(); reverbMix.gain.value = 0;
+            createReverbImpulse();
+            reverbNode.connect(reverbMix);
+            window.reverbMixNode = reverbMix;
+            
+            subGainNode = audioCtx.createGain(); subGainNode.gain.value = 0;
+            const subFilter = audioCtx.createBiquadFilter(); 
+            subFilter.type = "lowshelf"; 
+            subFilter.frequency.value = 80;
+            subFilter.gain.value = 0;
+            window.subFilterNode = subFilter;
+            
+            flangerDelay = audioCtx.createDelay(0.02);
+            flangerLFO = audioCtx.createOscillator();
+            const flangerGain = audioCtx.createGain();
+            const flangerMix = audioCtx.createGain(); flangerMix.gain.value = 0;
+            flangerLFO.frequency.value = 0.5;
+            flangerGain.gain.value = 0.002;
+            flangerLFO.connect(flangerGain);
+            flangerGain.connect(flangerDelay.delayTime);
+            flangerDelay.connect(flangerMix);
+            flangerLFO.start();
+            window.flangerMixNode = flangerMix;
+            window.flangerLFONode = flangerLFO;
             
             analyserNode = audioCtx.createAnalyser();
             analyserNode.fftSize = 128; analyserNode.smoothingTimeConstant = 0.8;
 
+            // Signal chain
             sourceNode.connect(inputGainNode);
             inputGainNode.connect(lowShelfNode);
             lowShelfNode.connect(midPeakingNode);
             midPeakingNode.connect(hiMidPeakingNode);
             hiMidPeakingNode.connect(highShelfNode);
-            highShelfNode.connect(highPassNode); 
+            highShelfNode.connect(subFilter);
+            subFilter.connect(highPassNode); 
             highPassNode.connect(lowPassNode);   
-            lowPassNode.connect(satNode);
-            satNode.connect(outputGainNode);
+            
+            // Effects chain
+            lowPassNode.connect(delayNode);
+            lowPassNode.connect(reverbNode);
+            lowPassNode.connect(flangerDelay);
+            
+            lowPassNode.connect(outputGainNode);
+            delayMix.connect(outputGainNode);
+            reverbMix.connect(outputGainNode);
+            flangerMix.connect(outputGainNode);
+            
             outputGainNode.connect(analyserNode);
             outputGainNode.connect(audioCtx.destination);
             updateAudioParams(); 
@@ -103,23 +147,16 @@
             isPlaying = !isPlaying;
         }
 
-        function makeDistortionCurve(amount) {
-            const k = typeof amount === 'number' ? amount : 50;
-            const n_samples = 44100;
-            const curve = new Float32Array(n_samples);
-            const deg = Math.PI / 180;
-            for (let i = 0; i < n_samples; ++i) {
-                let x = i * 2 / n_samples - 1;
-                if (window.currentSatType === 'tube') {
-                    if (x < 0) x = x * 1.2;
-                    curve[i] = (3 + k) * x * 20 * deg / (Math.PI + k * Math.abs(x));
-                } else if (window.currentSatType === 'transfo') {
-                    curve[i] = Math.tanh(x * (1 + k/10));
-                } else {
-                    curve[i] = Math.tanh(x * (1 + k/20));
-                }
+        function createReverbImpulse() {
+            const length = audioCtx.sampleRate * 2;
+            const impulse = audioCtx.createBuffer(2, length, audioCtx.sampleRate);
+            const left = impulse.getChannelData(0);
+            const right = impulse.getChannelData(1);
+            for (let i = 0; i < length; i++) {
+                left[i] = (Math.random() * 2 - 1) * Math.pow(1 - i / length, 2);
+                right[i] = (Math.random() * 2 - 1) * Math.pow(1 - i / length, 2);
             }
-            return curve;
+            reverbNode.buffer = impulse;
         }
 
         function updateAudioParams() {
@@ -129,7 +166,6 @@
                 inputGainNode.gain.setTargetAtTime(1, audioCtx.currentTime, 0.1);
                 lowShelfNode.gain.value = 0; midPeakingNode.gain.value = 0;
                 hiMidPeakingNode.gain.value = 0; highShelfNode.gain.value = 0;
-                satNode.curve = makeDistortionCurve(0); 
                 return;
             }
 
@@ -162,8 +198,20 @@
             const lpfVal = parseInt(document.getElementById('knob-highpass').dataset.val);
             lowPassNode.frequency.setTargetAtTime(2000 + (lpfVal * 200), audioCtx.currentTime, 0.1);
 
-            const satVal = parseInt(document.getElementById('knob-sat').dataset.val);
-            satNode.curve = makeDistortionCurve(satVal * 2); 
+            // New effects controls
+            const delayVal = parseInt(document.getElementById('knob-delay').dataset.val);
+            delayNode.delayTime.setTargetAtTime(0.1 + (delayVal / 100) * 0.9, audioCtx.currentTime, 0.1);
+            window.delayMixNode.gain.setTargetAtTime(delayVal / 100, audioCtx.currentTime, 0.1);
+
+            const reverbVal = parseInt(document.getElementById('knob-reverb').dataset.val);
+            window.reverbMixNode.gain.setTargetAtTime(reverbVal / 150, audioCtx.currentTime, 0.1);
+
+            const subVal = parseInt(document.getElementById('knob-sub').dataset.val);
+            window.subFilterNode.gain.setTargetAtTime(subVal / 10, audioCtx.currentTime, 0.1);
+
+            const flangerVal = parseInt(document.getElementById('knob-flanger').dataset.val);
+            window.flangerMixNode.gain.setTargetAtTime(flangerVal / 100, audioCtx.currentTime, 0.1);
+            window.flangerLFONode.frequency.setTargetAtTime(0.2 + (flangerVal / 100) * 2, audioCtx.currentTime, 0.1);
 
             const mainVal = currentMainKnobVal;
             const gain = (mainVal / 50) * (mainVal / 50); 
@@ -194,11 +242,11 @@
                 const oMidPeak = offlineCtx.createBiquadFilter(); oMidPeak.type = "peaking";
                 const oHiMidPeak = offlineCtx.createBiquadFilter(); oHiMidPeak.type = "peaking";
                 const oHighShelf = offlineCtx.createBiquadFilter(); oHighShelf.type = "highshelf";
-                const oSat = offlineCtx.createWaveShaper(); oSat.oversample = '4x';
+                const oSubFilter = offlineCtx.createBiquadFilter(); oSubFilter.type = "lowshelf"; oSubFilter.frequency.value = 80;
 
                 if(bypass) {
                     oInputGain.gain.value = 1; oLowShelf.gain.value = 0; oMidPeak.gain.value = 0; oHiMidPeak.gain.value = 0; oHighShelf.gain.value = 0;
-                    oSat.curve = makeDistortionCurve(0);
+                    oSubFilter.gain.value = 0;
                 } else {
                     const anySolo = Object.values(bands).some(b => b.solo);
                     const getGain = (band, actVal) => {
@@ -220,15 +268,17 @@
 
                     oHp.frequency.value = 20 + (parseInt(document.getElementById('knob-lowpass').dataset.val) * 4.8);
                     oLp.frequency.value = 2000 + (parseInt(document.getElementById('knob-highpass').dataset.val) * 200);
-                    oSat.curve = makeDistortionCurve(parseInt(document.getElementById('knob-sat').dataset.val) * 2);
+                    
+                    const subVal = parseInt(document.getElementById('knob-sub').dataset.val);
+                    oSubFilter.gain.value = subVal / 10;
                 }
 
                 const mainVal = currentMainKnobVal;
                 oOutputGain.gain.value = (mainVal / 50) * (mainVal / 50);
 
                 source.connect(oInputGain); oInputGain.connect(oLowShelf); oLowShelf.connect(oMidPeak);
-                oMidPeak.connect(oHiMidPeak); oHiMidPeak.connect(oHighShelf); oHighShelf.connect(oHp);
-                oHp.connect(oLp); oLp.connect(oSat); oSat.connect(oOutputGain); oOutputGain.connect(offlineCtx.destination);
+                oMidPeak.connect(oHiMidPeak); oHiMidPeak.connect(oHighShelf); oHighShelf.connect(oSubFilter);
+                oSubFilter.connect(oHp); oHp.connect(oLp); oLp.connect(oOutputGain); oOutputGain.connect(offlineCtx.destination);
 
                 source.start(0);
                 const renderedBuffer = await offlineCtx.startRendering();
@@ -289,15 +339,6 @@
             const btn = document.querySelector('#group-'+band+' .led-btn.solo');
             if(bands[band].solo) btn.classList.add('active'); else btn.classList.remove('active');
             if(bands[band].solo && bands[band].mute) toggleMute(band);
-            updateAudioParams();
-        }
-
-        window.currentSatType = 'tube';
-        // eslint-disable-next-line no-unused-vars
-        function setSatType(type, el) {
-            window.currentSatType = type;
-            document.querySelectorAll('.mode-btn').forEach(b => b.classList.remove('active'));
-            el.classList.add('active');
             updateAudioParams();
         }
 
@@ -398,7 +439,8 @@
         }
         
         // Setup all knobs
-        setupKnob('mainKnob'); setupKnob('knob-lowpass'); setupKnob('knob-highpass'); setupKnob('knob-sat');
+        setupKnob('mainKnob'); setupKnob('knob-lowpass'); setupKnob('knob-highpass'); 
+        setupKnob('knob-delay'); setupKnob('knob-reverb'); setupKnob('knob-sub'); setupKnob('knob-flanger');
         
         // Global event listeners (only once)
         window.addEventListener('mouseup', handleKnobEnd);

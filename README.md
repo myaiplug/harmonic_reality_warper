@@ -1,12 +1,12 @@
-# Harmonic Reality Warper — MyAiPlug
+# Spectral Space Designer — MyAiPlug
 
-A professional audio processing tool with a stunning landing page, built with the MyAiPlug design system.
+Multi-dimensional audio processing tool with a clean landing page, built with the MyAiPlug design system.
 
 ## MyAiPlug Suite
 
 This repository includes multiple plugin landing pages and demos:
 
-- **Harmonic Reality Warper**: AI-powered harmonic warping and frequency manipulation
+- **Spectral Space Designer**: Multi-band EQ, filters, delay, reverb, sub, and flanger
 - **Temporal Pitch Portal**: Time stretching and pitch shifting with dimensional effects
 - **Reverb De-Gloss**: AI-driven reverb removal for crystal-clear audio production
 
@@ -31,7 +31,10 @@ This repository includes multiple plugin landing pages and demos:
 
 ### Real-time Processing
 - Multi-band EQ (Low End, Mid Range, Presence, Air Band)
-- Saturation/Drive with 3 models (Tape, Tube, Transformer)
+- Delay with feedback control
+- Reverb for spatial depth
+- Sub bass enhancement
+- Sweeping flanger effect
 - High-pass and Low-pass filters
 - Bypass mode for A/B comparison
 - Solo and Mute per frequency band
@@ -46,12 +49,12 @@ This repository includes multiple plugin landing pages and demos:
 
 ### Landing Page
 - **Top Menu Bar**: Sticky header with MyAiPlug logo (icon + text), navigation links, and CTA buttons
-- **Hero Section**: Compelling headline with emphasis on AI-powered harmonic warping
-- **Features Grid**: 6 key benefits with icons and descriptions highlighting time-saving workflows
-- **How It Works**: Step-by-step process breakdown
-- **Pricing Tiers**: Three pricing options (Starter, Pro, Studio)
-- **Call to Action**: Engaging final section with social proof
-- **Footer**: Clean footer with copyright and links
+- **Hero Section**: Direct headline focused on shaping sound
+- **Features Grid**: 6 key features with clear, minimal descriptions
+- **How It Works**: Simple 3-step process
+- **Pricing Tiers**: Three pricing options (Free, Pro, Studio)
+- **Call to Action**: Clean final section
+- **Footer**: Simple footer with copyright and links
 
 ### Warper Tool
 - **Hardware-inspired UI**: Realistic plugin faceplate design with metallic textures
@@ -78,20 +81,19 @@ npm run preview
 ## Usage
 
 1. Visit the landing page at `/`
-2. Click "Try Demo Now" to open the Harmonic Reality Warper
+2. Click "Try It" to open the Spectral Space Designer
 3. Upload your audio file or test with the interface in demo mode
-4. Adjust EQ bands, drive, and filters to shape your sound
+4. Adjust EQ bands, filters, and effects to shape your sound
 5. Listen to the real-time preview
 6. Export your processed audio when ready
 
 ## Marketing Copy
 
 The page emphasizes:
-- ⏱️ **Time Saved**: "Save hours with MyAiPlug workflows"
-- 🎯 **One-Click Effects**: "Pre-tuned GenAI workflows eliminate hours of tweaking"
-- 🔥 **No Learning Curve**: "Click once, get professional results instantly"
-- 💎 **Production Quality**: "From demo to master"
-- 🌐 **Ecosystem Integration**: "Seamlessly connects with StemSplit, ScrewAI, and our entire suite"
+- Direct, clear messaging
+- "Less is more" approach
+- Focus on what the tool does
+- No overselling
 
 ## Brand Colors
 
