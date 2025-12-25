@@ -2,7 +2,7 @@
         let audioCtx;
         let sourceNode, inputGainNode, outputGainNode, analyserNode;
         let lowPassNode, highPassNode;
-        let delayNode, reverbNode, subGainNode, flangerNode;
+        let delayNode, reverbNode, subGainNode;
         let flangerLFO, flangerDelay;
         let isPlaying = false, bypass = false;
         let currentFileArrayBuffer = null;
