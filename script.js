@@ -353,29 +353,80 @@
             updateAudioParams();
         }
 
-        const spectrumContainer = document.getElementById('spectrum');
-        const numBars = 40; const barElements = [];
-        for (let i = 0; i < numBars; i++) {
-            const bar = document.createElement('div');
-            bar.classList.add('bar'); bar.style.height = '5%';
-            spectrumContainer.appendChild(bar); barElements.push(bar);
+        // New 7-band EQ control functions
+        // eslint-disable-next-line no-unused-vars
+        function toggleBandSolo(bandId) {
+            const btn = document.querySelector(`#${bandId} .led-btn.solo`);
+            if (btn) {
+                btn.classList.toggle('active');
+                updateAudioParams();
+            }
+        }
+
+        // eslint-disable-next-line no-unused-vars
+        function toggleBandMute(bandId) {
+            const btn = document.querySelector(`#${bandId} .led-btn.mute`);
+            if (btn) {
+                btn.classList.toggle('active');
+                updateAudioParams();
+            }
+        }
+
+        // Canvas-based waveform rendering
+        const waveformCanvas = document.getElementById('waveformCanvas');
+        const canvasCtx = waveformCanvas ? waveformCanvas.getContext('2d') : null;
+        
+        function resizeCanvas() {
+            if (waveformCanvas) {
+                waveformCanvas.width = waveformCanvas.offsetWidth * window.devicePixelRatio;
+                waveformCanvas.height = waveformCanvas.offsetHeight * window.devicePixelRatio;
+                canvasCtx.scale(window.devicePixelRatio, window.devicePixelRatio);
+            }
+        }
+        
+        if (waveformCanvas) {
+            resizeCanvas();
+            window.addEventListener('resize', resizeCanvas);
         }
 
         function renderLoop() {
             requestAnimationFrame(renderLoop);
-            if (!audioCtx || bypass) return; 
+            if (!audioCtx || bypass || !canvasCtx) return; 
+            
             const bufferLength = analyserNode.frequencyBinCount;
             const dataArray = new Uint8Array(bufferLength);
             analyserNode.getByteFrequencyData(dataArray);
-            const step = Math.floor(bufferLength / numBars);
+            
+            // Clear canvas
+            const width = waveformCanvas.offsetWidth;
+            const height = waveformCanvas.offsetHeight;
+            canvasCtx.clearRect(0, 0, width, height);
+            
+            // Draw background
+            canvasCtx.fillStyle = '#000';
+            canvasCtx.fillRect(0, 0, width, height);
+            
+            // Draw waveform bars
+            const barWidth = width / bufferLength * 2.5;
+            let x = 0;
             let rms = 0;
-            for (let i = 0; i < numBars; i++) {
-                let sum = 0; for (let j = 0; j < step; j++) sum += dataArray[i * step + j];
-                const val = sum / step; 
-                barElements[i].style.height = Math.max(2, (val / 255) * 100) + '%';
-                rms += val;
+            
+            for (let i = 0; i < bufferLength; i++) {
+                const barHeight = (dataArray[i] / 255) * height;
+                
+                // Create gradient for each bar
+                const gradient = canvasCtx.createLinearGradient(0, height - barHeight, 0, height);
+                gradient.addColorStop(0, '#00f2ff');
+                gradient.addColorStop(1, '#9d00ff');
+                
+                canvasCtx.fillStyle = gradient;
+                canvasCtx.fillRect(x, height - barHeight, barWidth, barHeight);
+                
+                x += barWidth + 1;
+                rms += dataArray[i];
             }
-            rms = rms / numBars; 
+            
+            rms = rms / bufferLength;
             const meterPct = (rms / 255) * 100 * 1.5; 
             document.getElementById('meter-in').style.height = Math.min(100, meterPct * 0.8) + '%';
             document.getElementById('meter-out').style.height = Math.min(100, meterPct * outputGainNode.gain.value) + '%';
@@ -444,6 +495,9 @@
         // Setup all knobs
         setupKnob('mainKnob'); setupKnob('knob-lowpass'); setupKnob('knob-highpass'); 
         setupKnob('knob-delay'); setupKnob('knob-reverb'); setupKnob('knob-sub'); setupKnob('knob-flanger');
+        // Setup 7-band EQ Q knobs
+        setupKnob('knob-q1'); setupKnob('knob-q2'); setupKnob('knob-q3'); setupKnob('knob-q4');
+        setupKnob('knob-q5'); setupKnob('knob-q6'); setupKnob('knob-q7');
         
         // Global event listeners (only once)
         window.addEventListener('mouseup', handleKnobEnd);
