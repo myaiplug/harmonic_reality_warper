@@ -47,105 +47,8 @@
         <!-- Hidden Audio -->
         <audio id="audioElement" loop crossorigin="anonymous"></audio>
 
-        <!-- Spectrum Analyzer -->
-        <div class="spectrum-frame">
-            <div class="spectrum-glass" id="spectrum">
-                <!-- JS Bars go here -->
-            </div>
-        </div>
-
-        <!-- Toggles Modules -->
-        <div class="modules-row">
-            <!-- Low -->
-            <div class="module-group" id="group-low">
-                <div class="engraved-label">Low End</div>
-                <div class="metal-switch" onclick="togglePill(this, 'low')">
-                    <div class="switch-opt" data-opt="thick">Thick</div>
-                    <div class="switch-opt active" data-opt="punch">Punch</div>
-                </div>
-                <div class="sm-ctrls">
-                    <div class="led-btn solo" onclick="toggleSolo('low')">S</div>
-                    <div class="led-btn mute" onclick="toggleMute('low')">M</div>
-                </div>
-            </div>
-
-            <!-- Mid -->
-            <div class="module-group" id="group-mid">
-                <div class="engraved-label">Mid Range</div>
-                <div class="metal-switch" onclick="togglePill(this, 'mid')">
-                    <div class="switch-opt active" data-opt="gentle">Soft</div>
-                    <div class="switch-opt" data-opt="warm">Warm</div>
-                </div>
-                <div class="sm-ctrls">
-                    <div class="led-btn solo" onclick="toggleSolo('mid')">S</div>
-                    <div class="led-btn mute" onclick="toggleMute('mid')">M</div>
-                </div>
-            </div>
-
-            <!-- Hi-Mid -->
-            <div class="module-group" id="group-himid">
-                <div class="engraved-label">Presence</div>
-                <div class="metal-switch" onclick="togglePill(this, 'himid')">
-                    <div class="switch-opt active" data-opt="flipped">Focus</div>
-                    <div class="switch-opt" data-opt="direct">Wide</div>
-                </div>
-                <div class="sm-ctrls">
-                    <div class="led-btn solo" onclick="toggleSolo('himid')">S</div>
-                    <div class="led-btn mute" onclick="toggleMute('himid')">M</div>
-                </div>
-            </div>
-
-            <!-- High -->
-            <div class="module-group" id="group-high">
-                <div class="engraved-label">Air Band</div>
-                <div class="metal-switch" onclick="togglePill(this, 'high')">
-                    <div class="switch-opt active" data-opt="excite">Shine</div>
-                    <div class="switch-opt" data-opt="smooth">Silk</div>
-                </div>
-                <div class="sm-ctrls">
-                    <div class="led-btn solo" onclick="toggleSolo('high')">S</div>
-                    <div class="led-btn mute" onclick="toggleMute('high')">M</div>
-                </div>
-            </div>
-        </div>
-
-        <!-- Main Section -->
-        <div class="main-section">
-            <!-- Left Meter / Slider Look -->
-            <div class="meter-housing">
-                <div class="meter-track">
-                    <div class="meter-val" id="meter-in"></div>
-                </div>
-                <div class="engraved-label" style="margin-top:5px">INPUT</div>
-            </div>
-
-            <!-- Big Knob -->
-            <div class="knob-surround">
-                <div class="main-knob-body" id="mainKnob">
-                    <div class="knob-cap">
-                        <div class="indicator-line"></div>
-                    </div>
-                </div>
-            </div>
-
-            <!-- Right Meter / Slider Look -->
-            <div class="meter-housing">
-                <div class="meter-track">
-                    <div class="meter-val" id="meter-out"></div>
-                </div>
-                <div class="engraved-label" style="margin-top:5px">OUTPUT</div>
-            </div>
-        </div>
-
-        <!-- Bottom Controls -->
-        <div class="bottom-rack">
-            <div class="ctrl-group">
-                <div class="engraved-label">BYPASS</div>
-                <div class="toggle-switch-v" id="bypassSwitch" onclick="toggleBypass()">
-                    <div class="toggle-lever"></div>
-                </div>
-            </div>
-
+        <!-- Effects Knobs Row (formerly bottom controls) -->
+        <div class="effects-knobs-row">
             <div class="ctrl-group">
                 <div class="mini-knob" id="knob-lowpass" data-val="75">
                     <div class="mini-knob-line"></div>
@@ -192,6 +95,149 @@
                     <div class="mini-val-display">0</div>
                 </div>
                 <div class="engraved-label">FLANGER</div>
+            </div>
+        </div>
+
+        <!-- Spectrum Analyzer / Waveform Display -->
+        <div class="spectrum-frame">
+            <canvas id="waveformCanvas" class="waveform-canvas"></canvas>
+            <div class="eq-overlay" id="eqOverlay">
+                <!-- Interactive EQ points will be rendered here -->
+            </div>
+        </div>
+
+        <!-- 7-Band Parametric EQ Controls -->
+        <div class="eq-bands-row">
+            <div class="eq-band" id="band-1" data-freq="60">
+                <div class="engraved-label">60Hz</div>
+                <div class="band-controls">
+                    <div class="mini-knob" id="knob-q1" data-val="50">
+                        <div class="mini-knob-line"></div>
+                    </div>
+                    <div class="engraved-label-sm">Q</div>
+                </div>
+                <div class="sm-ctrls">
+                    <div class="led-btn solo" onclick="toggleBandSolo('band-1')">S</div>
+                    <div class="led-btn mute" onclick="toggleBandMute('band-1')">M</div>
+                </div>
+            </div>
+
+            <div class="eq-band" id="band-2" data-freq="200">
+                <div class="engraved-label">200Hz</div>
+                <div class="band-controls">
+                    <div class="mini-knob" id="knob-q2" data-val="50">
+                        <div class="mini-knob-line"></div>
+                    </div>
+                    <div class="engraved-label-sm">Q</div>
+                </div>
+                <div class="sm-ctrls">
+                    <div class="led-btn solo" onclick="toggleBandSolo('band-2')">S</div>
+                    <div class="led-btn mute" onclick="toggleBandMute('band-2')">M</div>
+                </div>
+            </div>
+
+            <div class="eq-band" id="band-3" data-freq="800">
+                <div class="engraved-label">800Hz</div>
+                <div class="band-controls">
+                    <div class="mini-knob" id="knob-q3" data-val="50">
+                        <div class="mini-knob-line"></div>
+                    </div>
+                    <div class="engraved-label-sm">Q</div>
+                </div>
+                <div class="sm-ctrls">
+                    <div class="led-btn solo" onclick="toggleBandSolo('band-3')">S</div>
+                    <div class="led-btn mute" onclick="toggleBandMute('band-3')">M</div>
+                </div>
+            </div>
+
+            <div class="eq-band" id="band-4" data-freq="2000">
+                <div class="engraved-label">2kHz</div>
+                <div class="band-controls">
+                    <div class="mini-knob" id="knob-q4" data-val="50">
+                        <div class="mini-knob-line"></div>
+                    </div>
+                    <div class="engraved-label-sm">Q</div>
+                </div>
+                <div class="sm-ctrls">
+                    <div class="led-btn solo" onclick="toggleBandSolo('band-4')">S</div>
+                    <div class="led-btn mute" onclick="toggleBandMute('band-4')">M</div>
+                </div>
+            </div>
+
+            <div class="eq-band" id="band-5" data-freq="4000">
+                <div class="engraved-label">4kHz</div>
+                <div class="band-controls">
+                    <div class="mini-knob" id="knob-q5" data-val="50">
+                        <div class="mini-knob-line"></div>
+                    </div>
+                    <div class="engraved-label-sm">Q</div>
+                </div>
+                <div class="sm-ctrls">
+                    <div class="led-btn solo" onclick="toggleBandSolo('band-5')">S</div>
+                    <div class="led-btn mute" onclick="toggleBandMute('band-5')">M</div>
+                </div>
+            </div>
+
+            <div class="eq-band" id="band-6" data-freq="8000">
+                <div class="engraved-label">8kHz</div>
+                <div class="band-controls">
+                    <div class="mini-knob" id="knob-q6" data-val="50">
+                        <div class="mini-knob-line"></div>
+                    </div>
+                    <div class="engraved-label-sm">Q</div>
+                </div>
+                <div class="sm-ctrls">
+                    <div class="led-btn solo" onclick="toggleBandSolo('band-6')">S</div>
+                    <div class="led-btn mute" onclick="toggleBandMute('band-6')">M</div>
+                </div>
+            </div>
+
+            <div class="eq-band" id="band-7" data-freq="16000">
+                <div class="engraved-label">16kHz</div>
+                <div class="band-controls">
+                    <div class="mini-knob" id="knob-q7" data-val="50">
+                        <div class="mini-knob-line"></div>
+                    </div>
+                    <div class="engraved-label-sm">Q</div>
+                </div>
+                <div class="sm-ctrls">
+                    <div class="led-btn solo" onclick="toggleBandSolo('band-7')">S</div>
+                    <div class="led-btn mute" onclick="toggleBandMute('band-7')">M</div>
+                </div>
+            </div>
+        </div>
+
+        <!-- Main Section -->
+        <div class="main-section">
+            <!-- Left Meter / Slider Look -->
+            <div class="meter-housing">
+                <div class="meter-track">
+                    <div class="meter-val" id="meter-in"></div>
+                </div>
+                <div class="engraved-label" style="margin-top:5px">INPUT</div>
+            </div>
+
+            <!-- Big Knob with Bypass -->
+            <div class="knob-surround">
+                <div class="ctrl-group" style="position: absolute; top: -30px; left: 50%; transform: translateX(-50%);">
+                    <div class="toggle-switch-v" id="bypassSwitch" onclick="toggleBypass()">
+                        <div class="toggle-lever"></div>
+                    </div>
+                    <div class="engraved-label" style="font-size: 10px; margin-top: 3px;">BYPASS</div>
+                </div>
+                <div class="main-knob-body" id="mainKnob">
+                    <div class="knob-cap">
+                        <div class="indicator-line"></div>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Right Meter / Slider Look -->
+            <div class="meter-housing">
+                <div class="meter-track">
+                    <div class="meter-val" id="meter-out"></div>
+                </div>
+                <div class="engraved-label" style="margin-top:5px">OUTPUT</div>
             </div>
         </div>
 
