@@ -407,12 +407,21 @@
             canvasCtx.fillRect(0, 0, width, height);
             
             // Draw waveform bars
-            const barWidth = width / bufferLength * 2.5;
+            const numBars = Math.min(bufferLength, 60); // Limit bars to fit canvas
+            const barWidth = (width / numBars) * 0.8;
+            const barGap = (width / numBars) * 0.2;
             let x = 0;
             let rms = 0;
             
-            for (let i = 0; i < bufferLength; i++) {
-                const barHeight = (dataArray[i] / 255) * height;
+            const step = Math.floor(bufferLength / numBars);
+            for (let i = 0; i < numBars; i++) {
+                // Average values for this bar
+                let sum = 0;
+                for (let j = 0; j < step; j++) {
+                    sum += dataArray[i * step + j];
+                }
+                const avgValue = sum / step;
+                const barHeight = (avgValue / 255) * height;
                 
                 // Create gradient for each bar
                 const gradient = canvasCtx.createLinearGradient(0, height - barHeight, 0, height);
@@ -422,11 +431,11 @@
                 canvasCtx.fillStyle = gradient;
                 canvasCtx.fillRect(x, height - barHeight, barWidth, barHeight);
                 
-                x += barWidth + 1;
-                rms += dataArray[i];
+                x += barWidth + barGap;
+                rms += avgValue;
             }
             
-            rms = rms / bufferLength;
+            rms = rms / numBars;
             const meterPct = (rms / 255) * 100 * 1.5; 
             document.getElementById('meter-in').style.height = Math.min(100, meterPct * 0.8) + '%';
             document.getElementById('meter-out').style.height = Math.min(100, meterPct * outputGainNode.gain.value) + '%';
