@@ -1,18 +1,22 @@
 
         let audioCtx;
-        let sourceNode, inputGainNode, outputGainNode, analyserNode;
+        let sourceNode, inputGainNode, ampGainNode, outputGainNode, analyserNode;
         let lowPassNode, highPassNode;
         let delayNode, reverbNode, subGainNode;
         let flangerLFO, flangerDelay;
         let isPlaying = false, bypass = false;
         let currentFileArrayBuffer = null;
         
-        let lowShelfNode, midPeakingNode, hiMidPeakingNode, highShelfNode;
+        // 7-band parametric EQ
+        let eqBands = [];
         let bands = {
-            low: { mute: false, solo: false },
-            mid: { mute: false, solo: false },
-            himid: { mute: false, solo: false },
-            high: { mute: false, solo: false }
+            'band-1': { mute: false, solo: false, freq: 60 },
+            'band-2': { mute: false, solo: false, freq: 200 },
+            'band-3': { mute: false, solo: false, freq: 800 },
+            'band-4': { mute: false, solo: false, freq: 2000 },
+            'band-5': { mute: false, solo: false, freq: 4000 },
+            'band-6': { mute: false, solo: false, freq: 8000 },
+            'band-7': { mute: false, solo: false, freq: 16000 }
         };
 
         const audioElement = document.getElementById('audioElement');
@@ -56,15 +60,29 @@
             audioCtx = new AudioContext();
 
             sourceNode = audioCtx.createMediaElementSource(audioElement);
-            inputGainNode = audioCtx.createGain(); 
+            inputGainNode = audioCtx.createGain();
+            ampGainNode = audioCtx.createGain();
+            ampGainNode.gain.value = 1.0; // Default unity gain
             outputGainNode = audioCtx.createGain(); 
 
-            highPassNode = audioCtx.createBiquadFilter(); highPassNode.type = "highpass"; highPassNode.frequency.value = 75;
-            lowPassNode = audioCtx.createBiquadFilter(); lowPassNode.type = "lowpass"; lowPassNode.frequency.value = 19000;
-            lowShelfNode = audioCtx.createBiquadFilter(); lowShelfNode.type = "lowshelf"; lowShelfNode.frequency.value = 200;
-            midPeakingNode = audioCtx.createBiquadFilter(); midPeakingNode.type = "peaking"; midPeakingNode.frequency.value = 800; midPeakingNode.Q.value = 1;
-            hiMidPeakingNode = audioCtx.createBiquadFilter(); hiMidPeakingNode.type = "peaking"; hiMidPeakingNode.frequency.value = 3000;
-            highShelfNode = audioCtx.createBiquadFilter(); highShelfNode.type = "highshelf"; highShelfNode.frequency.value = 8000;
+            highPassNode = audioCtx.createBiquadFilter(); 
+            highPassNode.type = "highpass"; 
+            highPassNode.frequency.value = 75;
+            
+            lowPassNode = audioCtx.createBiquadFilter(); 
+            lowPassNode.type = "lowpass"; 
+            lowPassNode.frequency.value = 19000;
+
+            // Create 7-band parametric EQ
+            const frequencies = [60, 200, 800, 2000, 4000, 8000, 16000];
+            eqBands = frequencies.map((freq, index) => {
+                const filter = audioCtx.createBiquadFilter();
+                filter.type = index === 0 ? "lowshelf" : (index === 6 ? "highshelf" : "peaking");
+                filter.frequency.value = freq;
+                filter.Q.value = 1.0;
+                filter.gain.value = 0;
+                return filter;
+            });
 
             // New effects
             delayNode = audioCtx.createDelay(2.0); delayNode.delayTime.value = 0;
@@ -104,13 +122,18 @@
             analyserNode = audioCtx.createAnalyser();
             analyserNode.fftSize = 128; analyserNode.smoothingTimeConstant = 0.8;
 
-            // Signal chain
+            // Signal chain: source -> input gain -> amp gain -> 7-band EQ -> sub -> filters -> effects -> output
             sourceNode.connect(inputGainNode);
-            inputGainNode.connect(lowShelfNode);
-            lowShelfNode.connect(midPeakingNode);
-            midPeakingNode.connect(hiMidPeakingNode);
-            hiMidPeakingNode.connect(highShelfNode);
-            highShelfNode.connect(subFilter);
+            inputGainNode.connect(ampGainNode);
+            
+            // Connect all 7 EQ bands in series
+            ampGainNode.connect(eqBands[0]);
+            for (let i = 0; i < eqBands.length - 1; i++) {
+                eqBands[i].connect(eqBands[i + 1]);
+            }
+            
+            // Continue chain after EQ
+            eqBands[eqBands.length - 1].connect(subFilter);
             subFilter.connect(highPassNode); 
             highPassNode.connect(lowPassNode);   
             
@@ -163,43 +186,59 @@
         function updateAudioParams() {
             if (!audioCtx) return;
 
+            // Amp gain control
+            const ampVal = parseInt(document.getElementById('knob-amp-gain').dataset.val);
+            // Map 0-100 to 0.1-3.0 for clean gain boost
+            const ampGain = 0.1 + (ampVal / 100) * 2.9;
+            ampGainNode.gain.setTargetAtTime(ampGain, audioCtx.currentTime, 0.1);
+
             if (bypass) {
-                inputGainNode.gain.setTargetAtTime(1, audioCtx.currentTime, 0.1);
-                lowShelfNode.gain.value = 0; midPeakingNode.gain.value = 0;
-                hiMidPeakingNode.gain.value = 0; highShelfNode.gain.value = 0;
+                // In bypass mode, set all EQ gains to 0 (flat response)
+                eqBands.forEach(band => {
+                    band.gain.setTargetAtTime(0, audioCtx.currentTime, 0.1);
+                });
                 return;
             }
 
+            // Update 7-band parametric EQ
             const anySolo = Object.values(bands).some(b => b.solo);
-            const setBandGain = (bandName, node, activeValue) => {
-                if (bands[bandName].mute) node.gain.setTargetAtTime(0, audioCtx.currentTime, 0.1);
-                else if (anySolo && !bands[bandName].solo) node.gain.setTargetAtTime(0, audioCtx.currentTime, 0.1);
-                else node.gain.setTargetAtTime(activeValue, audioCtx.currentTime, 0.1);
-            };
+            
+            for (let i = 0; i < 7; i++) {
+                const bandId = `band-${i + 1}`;
+                const gainKnob = document.getElementById(`knob-gain${i + 1}`);
+                const qKnob = document.getElementById(`knob-q${i + 1}`);
+                
+                if (!gainKnob || !qKnob) continue;
+                
+                const gainVal = parseInt(gainKnob.dataset.val);
+                const qVal = parseInt(qKnob.dataset.val);
+                
+                // Map gain knob 0-100 to -12dB to +12dB
+                const gainDb = (gainVal - 50) * 0.24;
+                
+                // Map Q knob 0-100 to 0.3 to 10
+                const qFactor = 0.3 + (qVal / 100) * 9.7;
+                
+                // Apply mute/solo logic
+                let finalGain = gainDb;
+                if (bands[bandId].mute) {
+                    finalGain = -60; // Effectively mute
+                } else if (anySolo && !bands[bandId].solo) {
+                    finalGain = -60; // Mute if not soloed and something else is
+                }
+                
+                eqBands[i].gain.setTargetAtTime(finalGain, audioCtx.currentTime, 0.1);
+                eqBands[i].Q.value = qFactor;
+            }
 
-            const lowOpt = document.querySelector('#group-low .switch-opt.active').dataset.opt;
-            if (lowOpt === 'thick') { lowShelfNode.frequency.value = 100; setBandGain('low', lowShelfNode, 6); }
-            else { lowShelfNode.frequency.value = 60; setBandGain('low', lowShelfNode, 3); }
-
-            const midOpt = document.querySelector('#group-mid .switch-opt.active').dataset.opt;
-            if (midOpt === 'gentle') { midPeakingNode.Q.value = 0.5; setBandGain('mid', midPeakingNode, 4); }
-            else { midPeakingNode.Q.value = 1.0; setBandGain('mid', midPeakingNode, 5); }
-
-            const hiMidOpt = document.querySelector('#group-himid .switch-opt.active').dataset.opt;
-            if (hiMidOpt === 'flipped') { hiMidPeakingNode.frequency.value = 2500; setBandGain('himid', hiMidPeakingNode, -3); }
-            else { hiMidPeakingNode.frequency.value = 4000; setBandGain('himid', hiMidPeakingNode, 3); }
-
-            const highOpt = document.querySelector('#group-high .switch-opt.active').dataset.opt;
-            if (highOpt === 'excite') { highShelfNode.frequency.value = 10000; setBandGain('high', highShelfNode, 8); }
-            else { highShelfNode.frequency.value = 8000; setBandGain('high', highShelfNode, -2); }
-
+            // HPF and LPF controls
             const hpfVal = parseInt(document.getElementById('knob-lowpass').dataset.val);
             highPassNode.frequency.setTargetAtTime(20 + (hpfVal * 4.8), audioCtx.currentTime, 0.1);
 
             const lpfVal = parseInt(document.getElementById('knob-highpass').dataset.val);
             lowPassNode.frequency.setTargetAtTime(2000 + (lpfVal * 200), audioCtx.currentTime, 0.1);
 
-            // New effects controls
+            // Effects controls
             const delayVal = parseInt(document.getElementById('knob-delay').dataset.val);
             delayNode.delayTime.setTargetAtTime(0.1 + (delayVal / 100) * 0.9, audioCtx.currentTime, 0.1);
             window.delayMixNode.gain.setTargetAtTime(delayVal / 100, audioCtx.currentTime, 0.1);
@@ -236,38 +275,59 @@
                 const offlineCtx = new OfflineAudioContext(audioBuffer.numberOfChannels, audioBuffer.length, audioBuffer.sampleRate);
                 
                 const source = offlineCtx.createBufferSource(); source.buffer = audioBuffer;
-                const oInputGain = offlineCtx.createGain(); const oOutputGain = offlineCtx.createGain();
+                const oInputGain = offlineCtx.createGain(); 
+                const oAmpGain = offlineCtx.createGain();
+                const oOutputGain = offlineCtx.createGain();
                 const oHp = offlineCtx.createBiquadFilter(); oHp.type = "highpass";
                 const oLp = offlineCtx.createBiquadFilter(); oLp.type = "lowpass";
-                const oLowShelf = offlineCtx.createBiquadFilter(); oLowShelf.type = "lowshelf";
-                const oMidPeak = offlineCtx.createBiquadFilter(); oMidPeak.type = "peaking";
-                const oHiMidPeak = offlineCtx.createBiquadFilter(); oHiMidPeak.type = "peaking";
-                const oHighShelf = offlineCtx.createBiquadFilter(); oHighShelf.type = "highshelf";
                 const oSubFilter = offlineCtx.createBiquadFilter(); oSubFilter.type = "lowshelf"; oSubFilter.frequency.value = 80;
+                
+                // Create 7-band offline EQ
+                const frequencies = [60, 200, 800, 2000, 4000, 8000, 16000];
+                const oEqBands = frequencies.map((freq, index) => {
+                    const filter = offlineCtx.createBiquadFilter();
+                    filter.type = index === 0 ? "lowshelf" : (index === 6 ? "highshelf" : "peaking");
+                    filter.frequency.value = freq;
+                    filter.Q.value = 1.0;
+                    filter.gain.value = 0;
+                    return filter;
+                });
+                
                 // Note: Delay, reverb, and flanger are omitted from offline rendering for simplicity
                 // as they would require complex buffer manipulation. Only EQ, filters, and sub are exported.
 
+                // Set amp gain
+                const ampVal = parseInt(document.getElementById('knob-amp-gain').dataset.val);
+                oAmpGain.gain.value = 0.1 + (ampVal / 100) * 2.9;
+
                 if(bypass) {
-                    oInputGain.gain.value = 1; oLowShelf.gain.value = 0; oMidPeak.gain.value = 0; oHiMidPeak.gain.value = 0; oHighShelf.gain.value = 0;
+                    // Bypass mode: flat EQ
+                    oEqBands.forEach(band => band.gain.value = 0);
                     oSubFilter.gain.value = 0;
                 } else {
                     const anySolo = Object.values(bands).some(b => b.solo);
-                    const getGain = (band, actVal) => {
-                        if(bands[band].mute) return 0;
-                        if(anySolo && !bands[band].solo) return 0;
-                        return actVal;
-                    };
-                    const lowOpt = document.querySelector('#group-low .switch-opt.active').dataset.opt;
-                    oLowShelf.frequency.value = (lowOpt === 'thick') ? 100 : 60; oLowShelf.gain.value = getGain('low', (lowOpt === 'thick' ? 6 : 3));
-
-                    const midOpt = document.querySelector('#group-mid .switch-opt.active').dataset.opt;
-                    oMidPeak.frequency.value = 800; oMidPeak.Q.value = (midOpt === 'gentle') ? 0.5 : 1.0; oMidPeak.gain.value = getGain('mid', (midOpt === 'gentle' ? 4 : 5));
-
-                    const hiMidOpt = document.querySelector('#group-himid .switch-opt.active').dataset.opt;
-                    oHiMidPeak.frequency.value = (hiMidOpt === 'flipped') ? 2500 : 4000; oHiMidPeak.gain.value = getGain('himid', (hiMidOpt === 'flipped' ? -3 : 3));
-
-                    const highOpt = document.querySelector('#group-high .switch-opt.active').dataset.opt;
-                    oHighShelf.frequency.value = (highOpt === 'excite') ? 10000 : 8000; oHighShelf.gain.value = getGain('high', (highOpt === 'excite' ? 8 : -2));
+                    
+                    // Apply 7-band EQ settings
+                    for (let i = 0; i < 7; i++) {
+                        const bandId = `band-${i + 1}`;
+                        const gainKnob = document.getElementById(`knob-gain${i + 1}`);
+                        const qKnob = document.getElementById(`knob-q${i + 1}`);
+                        
+                        if (gainKnob && qKnob) {
+                            const gainVal = parseInt(gainKnob.dataset.val);
+                            const qVal = parseInt(qKnob.dataset.val);
+                            const gainDb = (gainVal - 50) * 0.24;
+                            const qFactor = 0.3 + (qVal / 100) * 9.7;
+                            
+                            let finalGain = gainDb;
+                            if (bands[bandId].mute || (anySolo && !bands[bandId].solo)) {
+                                finalGain = -60;
+                            }
+                            
+                            oEqBands[i].gain.value = finalGain;
+                            oEqBands[i].Q.value = qFactor;
+                        }
+                    }
 
                     oHp.frequency.value = 20 + (parseInt(document.getElementById('knob-lowpass').dataset.val) * 4.8);
                     oLp.frequency.value = 2000 + (parseInt(document.getElementById('knob-highpass').dataset.val) * 200);
@@ -279,9 +339,21 @@
                 const mainVal = currentMainKnobVal;
                 oOutputGain.gain.value = (mainVal / 50) * (mainVal / 50);
 
-                source.connect(oInputGain); oInputGain.connect(oLowShelf); oLowShelf.connect(oMidPeak);
-                oMidPeak.connect(oHiMidPeak); oHiMidPeak.connect(oHighShelf); oHighShelf.connect(oSubFilter);
-                oSubFilter.connect(oHp); oHp.connect(oLp); oLp.connect(oOutputGain); oOutputGain.connect(offlineCtx.destination);
+                // Connect offline chain
+                source.connect(oInputGain); 
+                oInputGain.connect(oAmpGain);
+                
+                // Connect 7 EQ bands in series
+                oAmpGain.connect(oEqBands[0]);
+                for (let i = 0; i < oEqBands.length - 1; i++) {
+                    oEqBands[i].connect(oEqBands[i + 1]);
+                }
+                
+                oEqBands[oEqBands.length - 1].connect(oSubFilter);
+                oSubFilter.connect(oHp); 
+                oHp.connect(oLp); 
+                oLp.connect(oOutputGain); 
+                oOutputGain.connect(offlineCtx.destination);
 
                 source.start(0);
                 const renderedBuffer = await offlineCtx.startRendering();
@@ -328,23 +400,6 @@
             updateAudioParams();
         }
 
-        function toggleMute(band) {
-            bands[band].mute = !bands[band].mute;
-            const btn = document.querySelector('#group-'+band+' .led-btn.mute');
-            if(bands[band].mute) btn.classList.add('active'); else btn.classList.remove('active');
-            if(bands[band].mute && bands[band].solo) toggleSolo(band);
-            updateAudioParams();
-        }
-
-         
-        function toggleSolo(band) {
-            bands[band].solo = !bands[band].solo;
-            const btn = document.querySelector('#group-'+band+' .led-btn.solo');
-            if(bands[band].solo) btn.classList.add('active'); else btn.classList.remove('active');
-            if(bands[band].solo && bands[band].mute) toggleMute(band);
-            updateAudioParams();
-        }
-
         // eslint-disable-next-line no-unused-vars
         function toggleBypass() {
             bypass = !bypass;
@@ -353,23 +408,35 @@
             updateAudioParams();
         }
 
-        // New 7-band EQ control functions
-        // eslint-disable-next-line no-unused-vars
+        // 7-band EQ control functions
+         
         function toggleBandSolo(bandId) {
+            bands[bandId].solo = !bands[bandId].solo;
             const btn = document.querySelector(`#${bandId} .led-btn.solo`);
             if (btn) {
-                btn.classList.toggle('active');
-                updateAudioParams();
+                if(bands[bandId].solo) btn.classList.add('active'); 
+                else btn.classList.remove('active');
             }
+            // If soloing, unmute this band
+            if(bands[bandId].solo && bands[bandId].mute) {
+                toggleBandMute(bandId);
+            }
+            updateAudioParams();
         }
 
-        // eslint-disable-next-line no-unused-vars
+         
         function toggleBandMute(bandId) {
+            bands[bandId].mute = !bands[bandId].mute;
             const btn = document.querySelector(`#${bandId} .led-btn.mute`);
             if (btn) {
-                btn.classList.toggle('active');
-                updateAudioParams();
+                if(bands[bandId].mute) btn.classList.add('active'); 
+                else btn.classList.remove('active');
             }
+            // If muting, unsolo this band
+            if(bands[bandId].mute && bands[bandId].solo) {
+                toggleBandSolo(bandId);
+            }
+            updateAudioParams();
         }
 
         // Canvas-based waveform rendering
@@ -502,9 +569,11 @@
         }
         
         // Setup all knobs
-        setupKnob('mainKnob'); setupKnob('knob-lowpass'); setupKnob('knob-highpass'); 
+        setupKnob('mainKnob'); setupKnob('knob-amp-gain'); setupKnob('knob-lowpass'); setupKnob('knob-highpass'); 
         setupKnob('knob-delay'); setupKnob('knob-reverb'); setupKnob('knob-sub'); setupKnob('knob-flanger');
-        // Setup 7-band EQ Q knobs
+        // Setup 7-band EQ gain and Q knobs
+        setupKnob('knob-gain1'); setupKnob('knob-gain2'); setupKnob('knob-gain3'); setupKnob('knob-gain4');
+        setupKnob('knob-gain5'); setupKnob('knob-gain6'); setupKnob('knob-gain7');
         setupKnob('knob-q1'); setupKnob('knob-q2'); setupKnob('knob-q3'); setupKnob('knob-q4');
         setupKnob('knob-q5'); setupKnob('knob-q6'); setupKnob('knob-q7');
         
