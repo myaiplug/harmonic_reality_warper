@@ -171,16 +171,21 @@
             isPlaying = !isPlaying;
         }
 
-        function createReverbImpulse() {
-            const length = audioCtx.sampleRate * 2;
-            const impulse = audioCtx.createBuffer(2, length, audioCtx.sampleRate);
+        // Shared impulse builder so the live preview and the WAV export use the same reverb shape.
+        function buildReverbImpulse(ctx) {
+            const length = Math.floor(ctx.sampleRate * 2);
+            const impulse = ctx.createBuffer(2, length, ctx.sampleRate);
             const left = impulse.getChannelData(0);
             const right = impulse.getChannelData(1);
             for (let i = 0; i < length; i++) {
                 left[i] = (Math.random() * 2 - 1) * Math.pow(1 - i / length, 2);
                 right[i] = (Math.random() * 2 - 1) * Math.pow(1 - i / length, 2);
             }
-            reverbNode.buffer = impulse;
+            return impulse;
+        }
+
+        function createReverbImpulse() {
+            reverbNode.buffer = buildReverbImpulse(audioCtx);
         }
 
         function updateAudioParams() {
@@ -272,7 +277,29 @@
             
             try {
                 const audioBuffer = await audioCtx.decodeAudioData(currentFileArrayBuffer.slice(0));
-                const offlineCtx = new OfflineAudioContext(audioBuffer.numberOfChannels, audioBuffer.length, audioBuffer.sampleRate);
+                const knobVal = (id) => parseInt(document.getElementById(id).dataset.val);
+
+                // Read every control up front (same mappings as updateAudioParams)
+                const ampVal = knobVal('knob-amp-gain');
+                const hpfVal = knobVal('knob-lowpass');
+                const lpfVal = knobVal('knob-highpass');
+                const delayVal = knobVal('knob-delay');
+                const reverbVal = knobVal('knob-reverb');
+                const subVal = knobVal('knob-sub');
+                const flangerVal = knobVal('knob-flanger');
+                const delayTime = 0.1 + (delayVal / 100) * 0.9;
+
+                // Leave room for the space-effect tails so echoes/reverb aren't chopped at the end.
+                // Delay feedback is 0.3, so ~6 repeats drops below -30 dB; the reverb IR is 2 s.
+                let tailSec = 0;
+                if (delayVal > 0) tailSec = Math.max(tailSec, delayTime * 6);
+                if (reverbVal > 0) tailSec = Math.max(tailSec, 2.2);
+                if (flangerVal > 0) tailSec = Math.max(tailSec, 0.05);
+                const sr = audioBuffer.sampleRate;
+                const renderLength = audioBuffer.length + Math.ceil(tailSec * sr);
+                // Stereo minimum: the live reverb IR is stereo, so a mono file is heard in stereo in preview.
+                const numChannels = Math.max(2, audioBuffer.numberOfChannels);
+                const offlineCtx = new OfflineAudioContext(numChannels, renderLength, sr);
                 
                 const source = offlineCtx.createBufferSource(); source.buffer = audioBuffer;
                 const oInputGain = offlineCtx.createGain(); 
@@ -292,18 +319,41 @@
                     filter.gain.value = 0;
                     return filter;
                 });
-                
-                // Note: Delay, reverb, and flanger are omitted from offline rendering for simplicity
-                // as they would require complex buffer manipulation. Only EQ, filters, and sub are exported.
+
+                // --- Space effects (mirrors initAudio) ---
+                // Delay with 0.3 feedback loop -> wet mix
+                const oDelay = offlineCtx.createDelay(2.0);
+                const oDelayFeedback = offlineCtx.createGain(); oDelayFeedback.gain.value = 0.3;
+                const oDelayMix = offlineCtx.createGain();
+                oDelay.connect(oDelayFeedback); oDelayFeedback.connect(oDelay);
+                oDelay.connect(oDelayMix);
+                oDelay.delayTime.value = delayTime;
+                oDelayMix.gain.value = delayVal / 100;
+
+                // Convolution reverb with the same 2 s noise-decay impulse
+                const oReverb = offlineCtx.createConvolver();
+                oReverb.buffer = buildReverbImpulse(offlineCtx);
+                const oReverbMix = offlineCtx.createGain();
+                oReverb.connect(oReverbMix);
+                oReverbMix.gain.value = reverbVal / 150;
+
+                // Flanger: short delay modulated by an LFO -> wet mix
+                const oFlangerDelay = offlineCtx.createDelay(0.02);
+                const oFlangerLFO = offlineCtx.createOscillator();
+                const oFlangerDepth = offlineCtx.createGain(); oFlangerDepth.gain.value = 0.002;
+                const oFlangerMix = offlineCtx.createGain();
+                oFlangerLFO.frequency.value = 0.2 + (flangerVal / 100) * 2;
+                oFlangerLFO.connect(oFlangerDepth);
+                oFlangerDepth.connect(oFlangerDelay.delayTime);
+                oFlangerDelay.connect(oFlangerMix);
+                oFlangerMix.gain.value = flangerVal / 100;
 
                 // Set amp gain
-                const ampVal = parseInt(document.getElementById('knob-amp-gain').dataset.val);
                 oAmpGain.gain.value = 0.1 + (ampVal / 100) * 2.9;
 
                 if(bypass) {
-                    // Bypass mode: flat EQ
+                    // Bypass mode mirrors the live graph: EQ goes flat, the rest of the chain stays engaged
                     oEqBands.forEach(band => band.gain.value = 0);
-                    oSubFilter.gain.value = 0;
                 } else {
                     const anySolo = Object.values(bands).some(b => b.solo);
                     
@@ -328,18 +378,17 @@
                             oEqBands[i].Q.value = qFactor;
                         }
                     }
-
-                    oHp.frequency.value = 20 + (parseInt(document.getElementById('knob-lowpass').dataset.val) * 4.8);
-                    oLp.frequency.value = 2000 + (parseInt(document.getElementById('knob-highpass').dataset.val) * 200);
-                    
-                    const subVal = parseInt(document.getElementById('knob-sub').dataset.val);
-                    oSubFilter.gain.value = subVal / 10;
                 }
+
+                // Filters and sub are always engaged, like the live graph
+                oHp.frequency.value = 20 + (hpfVal * 4.8);
+                oLp.frequency.value = 2000 + (lpfVal * 200);
+                oSubFilter.gain.value = subVal / 10;
 
                 const mainVal = currentMainKnobVal;
                 oOutputGain.gain.value = (mainVal / 50) * (mainVal / 50);
 
-                // Connect offline chain
+                // Connect offline chain: source -> input -> amp -> EQ x7 -> sub -> HPF -> LPF -> (dry + delay + reverb + flanger) -> output
                 source.connect(oInputGain); 
                 oInputGain.connect(oAmpGain);
                 
@@ -352,9 +401,17 @@
                 oEqBands[oEqBands.length - 1].connect(oSubFilter);
                 oSubFilter.connect(oHp); 
                 oHp.connect(oLp); 
-                oLp.connect(oOutputGain); 
+
+                oLp.connect(oOutputGain);      // dry
+                oLp.connect(oDelay);
+                oLp.connect(oReverb);
+                oLp.connect(oFlangerDelay);
+                oDelayMix.connect(oOutputGain);
+                oReverbMix.connect(oOutputGain);
+                oFlangerMix.connect(oOutputGain);
                 oOutputGain.connect(offlineCtx.destination);
 
+                oFlangerLFO.start(0);
                 source.start(0);
                 const renderedBuffer = await offlineCtx.startRendering();
                 const wavBlob = bufferToWave(renderedBuffer, renderedBuffer.length);
@@ -557,6 +614,7 @@
                 knob.style.transform = `rotate(${(newVal - 50) * 2.7}deg)`;
                 if(valDisplay) valDisplay.style.transform = `translate(-50%, -50%) rotate(${-(newVal - 50) * 2.7}deg)`;
             }
+            markRecipeEdited();
             updateAudioParams();
         }
         
@@ -590,3 +648,231 @@
         }, { passive: false });
     
 
+
+        // =====================================================================
+        // SPACE RECIPES (NoDAW Labs)
+        // All values are raw knob positions 0–100 using the same mappings as updateAudioParams:
+        //   amp  0.1 + v/100*2.9 (31 ≈ unity)   hpf 20 + v*4.8 Hz   lpf 2000 + v*200 Hz (100 = open)
+        //   delay time 0.1–1.0 s, wet v/100     reverb wet v/150    sub +v/10 dB @ 80 Hz
+        //   flanger wet v/100, rate 0.2–2.2 Hz  main (v/50)^2       eqGain (v-50)*0.24 dB
+        //   eqQ 0.3 + v/100*9.7 (7 ≈ Q 1.0; ignored on the 60 Hz / 16 kHz shelves)
+        // EQ bands: [60 shelf, 200, 800, 2k, 4k, 8k, 16k shelf]
+        // =====================================================================
+        const RECIPES = [
+            // --- Vocals ---
+            { id: 'air-lift', name: 'Air Lift', family: 'Vocals',
+              description: 'Gentle 8k/16k air with a mild 80 Hz rumble cut. Low end stays flat.',
+              amp: 31, hpf: 13, lpf: 100, delay: 0, reverb: 6, sub: 0, flanger: 0, main: 50,
+              eqGain: [50, 50, 50, 52, 55, 60, 64], eqQ: [7, 7, 7, 7, 7, 7, 7] },
+            { id: 'de-box', name: 'De-Box', family: 'Vocals',
+              description: 'Scoops boxy 200–800 Hz buildup and opens the top a touch.',
+              amp: 33, hpf: 15, lpf: 100, delay: 0, reverb: 0, sub: 0, flanger: 0, main: 50,
+              eqGain: [50, 42, 38, 50, 52, 54, 56], eqQ: [7, 12, 9, 7, 7, 7, 7] },
+            { id: 'phone-hook', name: 'Phone Hook', family: 'Vocals',
+              description: 'Telephone band (~300 Hz–3.4 kHz) with a pushed 800 Hz–2 kHz honk.',
+              amp: 40, hpf: 58, lpf: 7, delay: 0, reverb: 4, sub: 0, flanger: 0, main: 54,
+              eqGain: [30, 40, 62, 66, 54, 40, 35], eqQ: [7, 9, 12, 10, 9, 7, 7] },
+            { id: 'adlib-throw', name: 'Ad-lib Throw', family: 'Vocals',
+              description: 'Brighter, thinner ad-lib thrown back with a long echo and hall wash.',
+              amp: 31, hpf: 25, lpf: 92, delay: 38, reverb: 40, sub: 0, flanger: 0, main: 46,
+              eqGain: [44, 44, 48, 56, 58, 60, 60], eqQ: [7, 7, 7, 7, 7, 7, 7] },
+            { id: 'whisper-double', name: 'Whisper Double', family: 'Vocals',
+              description: 'Soft, airy double: lower level, presence lift, light echo and room.',
+              amp: 24, hpf: 30, lpf: 85, delay: 12, reverb: 18, sub: 0, flanger: 6, main: 48,
+              eqGain: [44, 46, 48, 54, 60, 58, 56], eqQ: [7, 7, 7, 7, 8, 7, 7] },
+
+            // --- Low end ---
+            { id: '808-weight', name: '808 Weight', family: 'Low end',
+              description: '+6 dB sub shelf, top rolled to ~8 kHz, small 800 Hz dip for clean weight.',
+              amp: 31, hpf: 2, lpf: 30, delay: 0, reverb: 0, sub: 60, flanger: 0, main: 44,
+              eqGain: [58, 50, 42, 48, 50, 50, 50], eqQ: [7, 7, 10, 7, 7, 7, 7] },
+            { id: 'sub-glue', name: 'Sub Glue', family: 'Low end',
+              description: 'Moderate sub with a touch of 60/200 Hz and a tiny short echo to glue.',
+              amp: 31, hpf: 3, lpf: 70, delay: 4, reverb: 0, sub: 35, flanger: 0, main: 46,
+              eqGain: [55, 54, 48, 50, 50, 50, 50], eqQ: [7, 6, 7, 7, 7, 7, 7] },
+            { id: 'kick-room', name: 'Kick Room', family: 'Low end',
+              description: 'Short room and slight echo, 800 Hz box cut, 2–4 kHz beater punch.',
+              amp: 33, hpf: 6, lpf: 60, delay: 6, reverb: 18, sub: 15, flanger: 0, main: 48,
+              eqGain: [55, 46, 44, 56, 54, 50, 50], eqQ: [7, 12, 9, 12, 10, 7, 7] },
+            { id: 'tight-bass', name: 'Tight Bass', family: 'Low end',
+              description: 'HPF ~68 Hz, controlled sub, mud cut at 200/800 Hz. No effects.',
+              amp: 31, hpf: 10, lpf: 45, delay: 0, reverb: 0, sub: 20, flanger: 0, main: 50,
+              eqGain: [52, 40, 44, 52, 50, 50, 50], eqQ: [7, 12, 10, 7, 7, 7, 7] },
+
+            // --- Space ---
+            { id: 'small-booth', name: 'Small Booth', family: 'Space',
+              description: 'Low, short reverb and a hint of echo, like a tight vocal booth.',
+              amp: 31, hpf: 12, lpf: 85, delay: 3, reverb: 12, sub: 0, flanger: 0, main: 50,
+              eqGain: [50, 48, 50, 52, 52, 52, 52], eqQ: [7, 7, 7, 7, 7, 7, 7] },
+            { id: 'dark-hall', name: 'Dark Hall', family: 'Space',
+              description: 'Big reverb wash with the top cut at ~6 kHz and less air.',
+              amp: 31, hpf: 18, lpf: 20, delay: 10, reverb: 85, sub: 0, flanger: 0, main: 44,
+              eqGain: [48, 48, 50, 48, 44, 38, 34], eqQ: [7, 7, 7, 7, 7, 7, 7] },
+            { id: 'slapback-rap', name: 'Slapback Rap', family: 'Space',
+              description: 'One quick ~0.2 s slap, almost no reverb, a bit of 2–4 kHz edge.',
+              amp: 31, hpf: 18, lpf: 90, delay: 14, reverb: 2, sub: 0, flanger: 0, main: 50,
+              eqGain: [48, 48, 48, 54, 54, 52, 52], eqQ: [7, 7, 7, 7, 7, 7, 7] },
+            { id: 'ping-pong-hook', name: 'Ping-Pong Hook', family: 'Space',
+              description: 'Long ~0.6 s echo and big reverb for hooks. (Mono delay, not true L/R ping-pong.)',
+              amp: 31, hpf: 22, lpf: 88, delay: 55, reverb: 45, sub: 0, flanger: 0, main: 42,
+              eqGain: [46, 46, 48, 54, 56, 56, 56], eqQ: [7, 7, 7, 7, 7, 7, 7] },
+
+            // --- Character ---
+            { id: 'lofi-room', name: 'Lo-fi Room', family: 'Character',
+              description: 'Muffled ~4.4 kHz top, thin lows, low-mid bump, light wobble and room.',
+              amp: 34, hpf: 30, lpf: 12, delay: 6, reverb: 28, sub: 0, flanger: 15, main: 50,
+              eqGain: [46, 54, 56, 50, 44, 40, 38], eqQ: [7, 7, 7, 7, 7, 7, 7] },
+            { id: 'tape-wobble', name: 'Tape Wobble', family: 'Character',
+              description: 'Flanger warble (~1 Hz) with a soft, rolled-off top and a little warmth.',
+              amp: 31, hpf: 10, lpf: 32, delay: 0, reverb: 8, sub: 10, flanger: 45, main: 44,
+              eqGain: [52, 52, 50, 48, 46, 44, 42], eqQ: [7, 7, 7, 7, 7, 7, 7] },
+            { id: 'syrup-haze', name: 'Syrup Haze', family: 'Character',
+              description: 'Slow flanger, deep reverb, dark ~5.6 kHz LPF. Pairs with ScrewAI.',
+              amp: 31, hpf: 8, lpf: 18, delay: 16, reverb: 55, sub: 25, flanger: 20, main: 42,
+              eqGain: [54, 54, 50, 46, 44, 40, 38], eqQ: [7, 7, 7, 7, 7, 7, 7] },
+            { id: 'radio-break', name: 'Radio Break', family: 'Character',
+              description: 'Band-limited radio (~260 Hz–4.4 kHz), hot mids, amp pushed with output trimmed.',
+              amp: 70, hpf: 50, lpf: 12, delay: 0, reverb: 6, sub: 0, flanger: 0, main: 36,
+              eqGain: [35, 42, 64, 62, 52, 40, 38], eqQ: [7, 9, 10, 9, 7, 7, 7] },
+
+            // --- Fix-it ---
+            { id: 'harsh-sample-tamer', name: 'Harsh Sample Tamer', family: 'Fix-it',
+              description: 'Broad cuts across 2–8 kHz plus a mild 13 kHz LPF to calm brittle samples.',
+              amp: 31, hpf: 6, lpf: 55, delay: 0, reverb: 0, sub: 0, flanger: 0, main: 52,
+              eqGain: [50, 50, 50, 44, 40, 42, 46], eqQ: [7, 7, 7, 9, 10, 9, 7] },
+            { id: 'mud-cut', name: 'Mud Cut', family: 'Fix-it',
+              description: 'Clears 200–800 Hz mud with a slight ~87 Hz HPF. Top stays open.',
+              amp: 33, hpf: 14, lpf: 100, delay: 0, reverb: 0, sub: 0, flanger: 0, main: 50,
+              eqGain: [50, 40, 42, 51, 50, 51, 51], eqQ: [7, 10, 9, 7, 7, 7, 7] },
+            { id: 'wide-mono-safe', name: 'Wide-but-Mono-Safe', family: 'Fix-it',
+              description: 'Width from moderate stereo reverb and a light echo only. No flanger, so it holds up in mono.',
+              amp: 31, hpf: 12, lpf: 92, delay: 8, reverb: 20, sub: 0, flanger: 0, main: 48,
+              eqGain: [50, 48, 50, 52, 52, 54, 54], eqQ: [7, 7, 7, 7, 7, 7, 7] }
+        ];
+
+        let activeRecipeId = null;
+
+        // Programmatically set a knob, mirroring handleKnobMove's rotation and value display.
+        function setKnob(id, v) {
+            const knob = document.getElementById(id);
+            if (!knob) return;
+            const val = Math.max(0, Math.min(100, Math.round(Number(v))));
+            const rot = (val - 50) * 2.7;
+            if (id === 'mainKnob') {
+                currentMainKnobVal = val;
+                knob.style.transform = `rotate(${rot}deg)`;
+                return;
+            }
+            knob.dataset.val = val;
+            knob.style.transform = `rotate(${rot}deg)`;
+            const valDisplay = knob.querySelector('.mini-val-display');
+            if (valDisplay) {
+                let displayVal = val;
+                if (id === 'knob-lowpass') displayVal = Math.floor(20 + val * 4.8);
+                if (id === 'knob-highpass') displayVal = Math.floor(2 + val * 0.2) + 'k';
+                valDisplay.innerText = displayVal;
+                valDisplay.style.transform = `translate(-50%, -50%) rotate(${-rot}deg)`;
+            }
+        }
+
+        function resetSoloMuteBypass() {
+            Object.keys(bands).forEach(bandId => {
+                bands[bandId].solo = false;
+                bands[bandId].mute = false;
+                document.querySelectorAll(`#${bandId} .led-btn`).forEach(b => b.classList.remove('active'));
+            });
+            bypass = false;
+            const sw = document.getElementById('bypassSwitch');
+            if (sw) sw.classList.remove('active');
+        }
+
+        function applyRecipe(idOrName) {
+            const key = String(idOrName).toLowerCase();
+            const r = RECIPES.find(x => x.id === key || x.name.toLowerCase() === key);
+            if (!r) { console.warn('Unknown recipe:', idOrName); return; }
+
+            resetSoloMuteBypass();
+
+            setKnob('knob-amp-gain', r.amp);
+            setKnob('knob-lowpass', r.hpf);    // id is swapped: knob-lowpass drives the HPF
+            setKnob('knob-highpass', r.lpf);   // id is swapped: knob-highpass drives the LPF
+            setKnob('knob-delay', r.delay);
+            setKnob('knob-reverb', r.reverb);
+            setKnob('knob-sub', r.sub);
+            setKnob('knob-flanger', r.flanger);
+            for (let i = 0; i < 7; i++) {
+                setKnob(`knob-gain${i + 1}`, r.eqGain[i]);
+                setKnob(`knob-q${i + 1}`, r.eqQ[i]);
+            }
+            setKnob('mainKnob', r.main);
+
+            updateAudioParams();   // no-op before first Engage; initAudio() reads the knobs then
+
+            activeRecipeId = r.id;
+            document.querySelectorAll('.recipe-btn').forEach(b => {
+                b.classList.toggle('active', b.dataset.recipe === r.id);
+            });
+            const sel = document.getElementById('recipeSelect');
+            if (sel) sel.value = r.id;
+            const desc = document.getElementById('recipeDesc');
+            if (desc) {
+                desc.innerHTML = `<strong>${r.name}</strong> · ${r.family}: ${r.description}`;
+                delete desc.dataset.edited;
+            }
+            statusText.innerText = `RECIPE: ${r.name.toUpperCase()}`;
+        }
+
+        // Build recipe UI (grid grouped by family + compact dropdown) and wire handlers
+        function buildRecipeUI() {
+            const grid = document.getElementById('recipeGrid');
+            const sel = document.getElementById('recipeSelect');
+            const families = [...new Set(RECIPES.map(r => r.family))];
+
+            families.forEach(fam => {
+                const items = RECIPES.filter(r => r.family === fam);
+                if (grid) {
+                    const row = document.createElement('div');
+                    row.className = 'recipe-family';
+                    const label = document.createElement('div');
+                    label.className = 'recipe-family-label';
+                    label.textContent = fam;
+                    row.appendChild(label);
+                    const btns = document.createElement('div');
+                    btns.className = 'recipe-family-btns';
+                    items.forEach(r => {
+                        const b = document.createElement('button');
+                        b.type = 'button';
+                        b.className = 'preset-btn recipe-btn';
+                        b.dataset.recipe = r.id;
+                        b.textContent = r.name;
+                        b.title = r.description;
+                        b.addEventListener('click', () => applyRecipe(r.id));
+                        btns.appendChild(b);
+                    });
+                    row.appendChild(btns);
+                    grid.appendChild(row);
+                }
+                if (sel) {
+                    const og = document.createElement('optgroup');
+                    og.label = fam;
+                    items.forEach(r => {
+                        const o = document.createElement('option');
+                        o.value = r.id; o.textContent = r.name;
+                        og.appendChild(o);
+                    });
+                    sel.appendChild(og);
+                }
+            });
+            if (sel) sel.addEventListener('change', () => { if (sel.value) applyRecipe(sel.value); });
+        }
+        buildRecipeUI();
+
+        // Mark the active recipe as edited once the user tweaks a knob by hand
+        function markRecipeEdited() {
+            if (!activeRecipeId) return;
+            const desc = document.getElementById('recipeDesc');
+            if (desc && !desc.dataset.edited) {
+                desc.dataset.edited = '1';
+                desc.insertAdjacentText('beforeend', ' (edited)');
+            }
+        }
