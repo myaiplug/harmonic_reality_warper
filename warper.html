@@ -37,7 +37,7 @@
         <div class="lcd-panel">
             <div style="display: flex; gap: 10px;">
                 <button class="btn-metallic" onclick="document.getElementById('audioFile').click()">Load Audio</button>
-                <input type="file" id="audioFile" accept="audio/*">
+                <input type="file" id="audioFile" accept="audio/*,video/mp4,video/quicktime,video/webm,.wav,.mp3,.m4a,.aac,.flac,.aif,.aiff,.ogg,.opus,.webm,.mp4,.mov,.caf">
                 <button class="btn-metallic" id="playBtn" onclick="togglePlay()">Engage</button>
                 <button class="btn-metallic" id="downloadBtn" onclick="downloadProcessedAudio()" disabled>Export WAV</button>
             </div>
@@ -124,6 +124,18 @@
             <div class="eq-overlay" id="eqOverlay">
                 <!-- Interactive EQ points will be rendered here -->
             </div>
+        </div>
+
+        <!-- Spectral Compare: input vs warped output (mel-spec, local) -->
+        <div class="spectral-compare" id="spectralCompare" hidden>
+            <div class="spectral-header">
+                <div class="engraved-label">SPECTRAL COMPARE <span class="recipes-brand">· log-mel</span></div>
+                <button class="btn-metallic btn-compact" id="melCompareBtn" disabled>Compare</button>
+            </div>
+            <div class="spectral-row"><span class="engraved-label-sm">INPUT</span><canvas id="melInput" width="720" height="72"></canvas></div>
+            <div class="spectral-row"><span class="engraved-label-sm">WARPED</span><canvas id="melOutput" width="720" height="72"></canvas></div>
+            <div class="recipe-desc" id="melNote"></div>
+            <div class="wavey-credit">Uses <a href="https://github.com/wavey-ai/soundkit" target="_blank" rel="noopener">soundkit</a> / <a href="https://github.com/wavey-ai/mel-spec" target="_blank" rel="noopener">mel-spec</a> by wavey-ai (MIT)</div>
         </div>
 
         <!-- 7-Band Parametric EQ Controls -->
@@ -308,5 +320,6 @@
     
 
 <script src="script.js" defer></script>
+<script type="module" src="wavey-warper.js"></script>
 </body>
 </html>

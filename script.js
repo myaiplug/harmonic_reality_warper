@@ -51,6 +51,9 @@
                 downloadBtn.style.cursor = 'pointer';
                 
                 if(isPlaying) togglePlay(); 
+
+                // Wider import + spectral view (soundkit / mel-spec by wavey-ai, MIT). Optional add-on.
+                if (window.WaveyWarper) window.WaveyWarper.onFile(file);
             }
         });
 
@@ -263,6 +266,159 @@
             outputGainNode.gain.setTargetAtTime(gain, audioCtx.currentTime, 0.1);
         }
 
+        // Browser decoder first; if it declines the file, reuse the soundkit-wasm decode from wavey-warper.js.
+        async function decodeInputForExport() {
+            try {
+                return await audioCtx.decodeAudioData(currentFileArrayBuffer.slice(0));
+            } catch (e) {
+                const fallback = window.waveyFallbackBuffer || (window.WaveyWarper && window.WaveyWarper.getInputBuffer());
+                if (fallback) return fallback;
+                throw e;
+            }
+        }
+
+        // Offline render of the full chain with the current settings (used by Export WAV and the spectral compare).
+        async function renderProcessedBuffer(audioBuffer) {
+            const knobVal = (id) => parseInt(document.getElementById(id).dataset.val);
+
+            // Read every control up front (same mappings as updateAudioParams)
+            const ampVal = knobVal('knob-amp-gain');
+            const hpfVal = knobVal('knob-lowpass');
+            const lpfVal = knobVal('knob-highpass');
+            const delayVal = knobVal('knob-delay');
+            const reverbVal = knobVal('knob-reverb');
+            const subVal = knobVal('knob-sub');
+            const flangerVal = knobVal('knob-flanger');
+            const delayTime = 0.1 + (delayVal / 100) * 0.9;
+
+            // Leave room for the space-effect tails so echoes/reverb aren't chopped at the end.
+            // Delay feedback is 0.3, so ~6 repeats drops below -30 dB; the reverb IR is 2 s.
+            let tailSec = 0;
+            if (delayVal > 0) tailSec = Math.max(tailSec, delayTime * 6);
+            if (reverbVal > 0) tailSec = Math.max(tailSec, 2.2);
+            if (flangerVal > 0) tailSec = Math.max(tailSec, 0.05);
+            const sr = audioBuffer.sampleRate;
+            const renderLength = audioBuffer.length + Math.ceil(tailSec * sr);
+            // Stereo minimum: the live reverb IR is stereo, so a mono file is heard in stereo in preview.
+            const numChannels = Math.max(2, audioBuffer.numberOfChannels);
+            const offlineCtx = new OfflineAudioContext(numChannels, renderLength, sr);
+            
+            const source = offlineCtx.createBufferSource(); source.buffer = audioBuffer;
+            const oInputGain = offlineCtx.createGain(); 
+            const oAmpGain = offlineCtx.createGain();
+            const oOutputGain = offlineCtx.createGain();
+            const oHp = offlineCtx.createBiquadFilter(); oHp.type = "highpass";
+            const oLp = offlineCtx.createBiquadFilter(); oLp.type = "lowpass";
+            const oSubFilter = offlineCtx.createBiquadFilter(); oSubFilter.type = "lowshelf"; oSubFilter.frequency.value = 80;
+            
+            // Create 7-band offline EQ
+            const frequencies = [60, 200, 800, 2000, 4000, 8000, 16000];
+            const oEqBands = frequencies.map((freq, index) => {
+                const filter = offlineCtx.createBiquadFilter();
+                filter.type = index === 0 ? "lowshelf" : (index === 6 ? "highshelf" : "peaking");
+                filter.frequency.value = freq;
+                filter.Q.value = 1.0;
+                filter.gain.value = 0;
+                return filter;
+            });
+
+            // --- Space effects (mirrors initAudio) ---
+            // Delay with 0.3 feedback loop -> wet mix
+            const oDelay = offlineCtx.createDelay(2.0);
+            const oDelayFeedback = offlineCtx.createGain(); oDelayFeedback.gain.value = 0.3;
+            const oDelayMix = offlineCtx.createGain();
+            oDelay.connect(oDelayFeedback); oDelayFeedback.connect(oDelay);
+            oDelay.connect(oDelayMix);
+            oDelay.delayTime.value = delayTime;
+            oDelayMix.gain.value = delayVal / 100;
+
+            // Convolution reverb with the same 2 s noise-decay impulse
+            const oReverb = offlineCtx.createConvolver();
+            oReverb.buffer = buildReverbImpulse(offlineCtx);
+            const oReverbMix = offlineCtx.createGain();
+            oReverb.connect(oReverbMix);
+            oReverbMix.gain.value = reverbVal / 150;
+
+            // Flanger: short delay modulated by an LFO -> wet mix
+            const oFlangerDelay = offlineCtx.createDelay(0.02);
+            const oFlangerLFO = offlineCtx.createOscillator();
+            const oFlangerDepth = offlineCtx.createGain(); oFlangerDepth.gain.value = 0.002;
+            const oFlangerMix = offlineCtx.createGain();
+            oFlangerLFO.frequency.value = 0.2 + (flangerVal / 100) * 2;
+            oFlangerLFO.connect(oFlangerDepth);
+            oFlangerDepth.connect(oFlangerDelay.delayTime);
+            oFlangerDelay.connect(oFlangerMix);
+            oFlangerMix.gain.value = flangerVal / 100;
+
+            // Set amp gain
+            oAmpGain.gain.value = 0.1 + (ampVal / 100) * 2.9;
+
+            if(bypass) {
+                // Bypass mode mirrors the live graph: EQ goes flat, the rest of the chain stays engaged
+                oEqBands.forEach(band => band.gain.value = 0);
+            } else {
+                const anySolo = Object.values(bands).some(b => b.solo);
+                
+                // Apply 7-band EQ settings
+                for (let i = 0; i < 7; i++) {
+                    const bandId = `band-${i + 1}`;
+                    const gainKnob = document.getElementById(`knob-gain${i + 1}`);
+                    const qKnob = document.getElementById(`knob-q${i + 1}`);
+                    
+                    if (gainKnob && qKnob) {
+                        const gainVal = parseInt(gainKnob.dataset.val);
+                        const qVal = parseInt(qKnob.dataset.val);
+                        const gainDb = (gainVal - 50) * 0.24;
+                        const qFactor = 0.3 + (qVal / 100) * 9.7;
+                        
+                        let finalGain = gainDb;
+                        if (bands[bandId].mute || (anySolo && !bands[bandId].solo)) {
+                            finalGain = -60;
+                        }
+                        
+                        oEqBands[i].gain.value = finalGain;
+                        oEqBands[i].Q.value = qFactor;
+                    }
+                }
+            }
+
+            // Filters and sub are always engaged, like the live graph
+            oHp.frequency.value = 20 + (hpfVal * 4.8);
+            oLp.frequency.value = 2000 + (lpfVal * 200);
+            oSubFilter.gain.value = subVal / 10;
+
+            const mainVal = currentMainKnobVal;
+            oOutputGain.gain.value = (mainVal / 50) * (mainVal / 50);
+
+            // Connect offline chain: source -> input -> amp -> EQ x7 -> sub -> HPF -> LPF -> (dry + delay + reverb + flanger) -> output
+            source.connect(oInputGain); 
+            oInputGain.connect(oAmpGain);
+            
+            // Connect 7 EQ bands in series
+            oAmpGain.connect(oEqBands[0]);
+            for (let i = 0; i < oEqBands.length - 1; i++) {
+                oEqBands[i].connect(oEqBands[i + 1]);
+            }
+            
+            oEqBands[oEqBands.length - 1].connect(oSubFilter);
+            oSubFilter.connect(oHp); 
+            oHp.connect(oLp); 
+
+            oLp.connect(oOutputGain);      // dry
+            oLp.connect(oDelay);
+            oLp.connect(oReverb);
+            oLp.connect(oFlangerDelay);
+            oDelayMix.connect(oOutputGain);
+            oReverbMix.connect(oOutputGain);
+            oFlangerMix.connect(oOutputGain);
+            oOutputGain.connect(offlineCtx.destination);
+
+            oFlangerLFO.start(0);
+            source.start(0);
+            return await offlineCtx.startRendering();
+        }
+        window.renderProcessedBuffer = renderProcessedBuffer;
+
         // eslint-disable-next-line no-unused-vars
         async function downloadProcessedAudio() {
             // Prevent download in demo mode
@@ -276,144 +432,8 @@
             statusText.innerText = "RENDERING...";
             
             try {
-                const audioBuffer = await audioCtx.decodeAudioData(currentFileArrayBuffer.slice(0));
-                const knobVal = (id) => parseInt(document.getElementById(id).dataset.val);
-
-                // Read every control up front (same mappings as updateAudioParams)
-                const ampVal = knobVal('knob-amp-gain');
-                const hpfVal = knobVal('knob-lowpass');
-                const lpfVal = knobVal('knob-highpass');
-                const delayVal = knobVal('knob-delay');
-                const reverbVal = knobVal('knob-reverb');
-                const subVal = knobVal('knob-sub');
-                const flangerVal = knobVal('knob-flanger');
-                const delayTime = 0.1 + (delayVal / 100) * 0.9;
-
-                // Leave room for the space-effect tails so echoes/reverb aren't chopped at the end.
-                // Delay feedback is 0.3, so ~6 repeats drops below -30 dB; the reverb IR is 2 s.
-                let tailSec = 0;
-                if (delayVal > 0) tailSec = Math.max(tailSec, delayTime * 6);
-                if (reverbVal > 0) tailSec = Math.max(tailSec, 2.2);
-                if (flangerVal > 0) tailSec = Math.max(tailSec, 0.05);
-                const sr = audioBuffer.sampleRate;
-                const renderLength = audioBuffer.length + Math.ceil(tailSec * sr);
-                // Stereo minimum: the live reverb IR is stereo, so a mono file is heard in stereo in preview.
-                const numChannels = Math.max(2, audioBuffer.numberOfChannels);
-                const offlineCtx = new OfflineAudioContext(numChannels, renderLength, sr);
-                
-                const source = offlineCtx.createBufferSource(); source.buffer = audioBuffer;
-                const oInputGain = offlineCtx.createGain(); 
-                const oAmpGain = offlineCtx.createGain();
-                const oOutputGain = offlineCtx.createGain();
-                const oHp = offlineCtx.createBiquadFilter(); oHp.type = "highpass";
-                const oLp = offlineCtx.createBiquadFilter(); oLp.type = "lowpass";
-                const oSubFilter = offlineCtx.createBiquadFilter(); oSubFilter.type = "lowshelf"; oSubFilter.frequency.value = 80;
-                
-                // Create 7-band offline EQ
-                const frequencies = [60, 200, 800, 2000, 4000, 8000, 16000];
-                const oEqBands = frequencies.map((freq, index) => {
-                    const filter = offlineCtx.createBiquadFilter();
-                    filter.type = index === 0 ? "lowshelf" : (index === 6 ? "highshelf" : "peaking");
-                    filter.frequency.value = freq;
-                    filter.Q.value = 1.0;
-                    filter.gain.value = 0;
-                    return filter;
-                });
-
-                // --- Space effects (mirrors initAudio) ---
-                // Delay with 0.3 feedback loop -> wet mix
-                const oDelay = offlineCtx.createDelay(2.0);
-                const oDelayFeedback = offlineCtx.createGain(); oDelayFeedback.gain.value = 0.3;
-                const oDelayMix = offlineCtx.createGain();
-                oDelay.connect(oDelayFeedback); oDelayFeedback.connect(oDelay);
-                oDelay.connect(oDelayMix);
-                oDelay.delayTime.value = delayTime;
-                oDelayMix.gain.value = delayVal / 100;
-
-                // Convolution reverb with the same 2 s noise-decay impulse
-                const oReverb = offlineCtx.createConvolver();
-                oReverb.buffer = buildReverbImpulse(offlineCtx);
-                const oReverbMix = offlineCtx.createGain();
-                oReverb.connect(oReverbMix);
-                oReverbMix.gain.value = reverbVal / 150;
-
-                // Flanger: short delay modulated by an LFO -> wet mix
-                const oFlangerDelay = offlineCtx.createDelay(0.02);
-                const oFlangerLFO = offlineCtx.createOscillator();
-                const oFlangerDepth = offlineCtx.createGain(); oFlangerDepth.gain.value = 0.002;
-                const oFlangerMix = offlineCtx.createGain();
-                oFlangerLFO.frequency.value = 0.2 + (flangerVal / 100) * 2;
-                oFlangerLFO.connect(oFlangerDepth);
-                oFlangerDepth.connect(oFlangerDelay.delayTime);
-                oFlangerDelay.connect(oFlangerMix);
-                oFlangerMix.gain.value = flangerVal / 100;
-
-                // Set amp gain
-                oAmpGain.gain.value = 0.1 + (ampVal / 100) * 2.9;
-
-                if(bypass) {
-                    // Bypass mode mirrors the live graph: EQ goes flat, the rest of the chain stays engaged
-                    oEqBands.forEach(band => band.gain.value = 0);
-                } else {
-                    const anySolo = Object.values(bands).some(b => b.solo);
-                    
-                    // Apply 7-band EQ settings
-                    for (let i = 0; i < 7; i++) {
-                        const bandId = `band-${i + 1}`;
-                        const gainKnob = document.getElementById(`knob-gain${i + 1}`);
-                        const qKnob = document.getElementById(`knob-q${i + 1}`);
-                        
-                        if (gainKnob && qKnob) {
-                            const gainVal = parseInt(gainKnob.dataset.val);
-                            const qVal = parseInt(qKnob.dataset.val);
-                            const gainDb = (gainVal - 50) * 0.24;
-                            const qFactor = 0.3 + (qVal / 100) * 9.7;
-                            
-                            let finalGain = gainDb;
-                            if (bands[bandId].mute || (anySolo && !bands[bandId].solo)) {
-                                finalGain = -60;
-                            }
-                            
-                            oEqBands[i].gain.value = finalGain;
-                            oEqBands[i].Q.value = qFactor;
-                        }
-                    }
-                }
-
-                // Filters and sub are always engaged, like the live graph
-                oHp.frequency.value = 20 + (hpfVal * 4.8);
-                oLp.frequency.value = 2000 + (lpfVal * 200);
-                oSubFilter.gain.value = subVal / 10;
-
-                const mainVal = currentMainKnobVal;
-                oOutputGain.gain.value = (mainVal / 50) * (mainVal / 50);
-
-                // Connect offline chain: source -> input -> amp -> EQ x7 -> sub -> HPF -> LPF -> (dry + delay + reverb + flanger) -> output
-                source.connect(oInputGain); 
-                oInputGain.connect(oAmpGain);
-                
-                // Connect 7 EQ bands in series
-                oAmpGain.connect(oEqBands[0]);
-                for (let i = 0; i < oEqBands.length - 1; i++) {
-                    oEqBands[i].connect(oEqBands[i + 1]);
-                }
-                
-                oEqBands[oEqBands.length - 1].connect(oSubFilter);
-                oSubFilter.connect(oHp); 
-                oHp.connect(oLp); 
-
-                oLp.connect(oOutputGain);      // dry
-                oLp.connect(oDelay);
-                oLp.connect(oReverb);
-                oLp.connect(oFlangerDelay);
-                oDelayMix.connect(oOutputGain);
-                oReverbMix.connect(oOutputGain);
-                oFlangerMix.connect(oOutputGain);
-                oOutputGain.connect(offlineCtx.destination);
-
-                oFlangerLFO.start(0);
-                source.start(0);
-                const renderedBuffer = await offlineCtx.startRendering();
+                const audioBuffer = await decodeInputForExport();
+                const renderedBuffer = await renderProcessedBuffer(audioBuffer);
                 const wavBlob = bufferToWave(renderedBuffer, renderedBuffer.length);
                 const url = URL.createObjectURL(wavBlob);
                 const a = document.createElement('a');
@@ -422,6 +442,7 @@
                 
                 window.URL.revokeObjectURL(url); document.body.removeChild(a);
                 statusText.innerText = "EXPORT COMPLETE";
+                if (window.WaveyWarper) window.WaveyWarper.showOutput(renderedBuffer);
                 setTimeout(() => { statusText.innerText = prevStatus; }, 3000);
             } catch (e) {
                 console.error(e); statusText.innerText = "RENDER ERROR";

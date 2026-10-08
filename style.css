@@ -733,3 +733,26 @@
         body.light-mode .preset-btn:hover, body.light-mode .preset-btn.active {
             background: var(--accent-grad); background-size: 200%; color: #fff; border-color: var(--accent-cyan);
         }
+
+        /* Spectral Compare (mel-spec / soundkit by wavey-ai, MIT) */
+        .spectral-compare {
+            background: rgba(0,0,0,0.15);
+            border-radius: 8px;
+            padding: 10px 14px;
+            margin-bottom: 20px;
+            display: flex;
+            flex-direction: column;
+            gap: 8px;
+        }
+        .spectral-compare[hidden] { display: none; }
+        .spectral-header { display: flex; align-items: center; justify-content: space-between; gap: 10px; }
+        .btn-metallic.btn-compact { padding: 6px 14px; font-size: 10px; }
+        .btn-metallic.btn-compact:disabled { opacity: 0.4; cursor: not-allowed; }
+        .spectral-row { display: grid; grid-template-columns: 58px 1fr; align-items: center; gap: 8px; }
+        .spectral-row canvas {
+            width: 100%; height: 56px; display: block;
+            background: #000; border-radius: 4px;
+            border: 1px solid var(--faceplate-border);
+        }
+        .wavey-credit { font-size: 9px; color: var(--text-engraved); letter-spacing: 0.3px; }
+        .wavey-credit a { color: inherit; }
