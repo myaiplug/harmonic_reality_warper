@@ -494,14 +494,17 @@ export async function timbreProfile(buffer, opts = {}) {
   const keep = [];
   for (let f = 0; f < n; f += 1) if (Number.isFinite(frames[f * stride]) && frames[f * stride] > gate) keep.push(f);
   if (keep.length < 8) throw new Error("Not enough audible audio for a timbre profile (need at least ~5 seconds)");
-  const mean = new Float64Array(stride), sq = new Float64Array(stride);
-  for (const f of keep) for (let j = 0; j < stride; j += 1) { const v = frames[f * stride + j]; mean[j] += v; sq[j] += v * v; }
+  const mean = new Float64Array(stride), sq = new Float64Array(stride), power = new Float64Array(BANDS_N);
+  for (const f of keep) {
+    for (let j = 0; j < stride; j += 1) { const v = frames[f * stride + j]; mean[j] += v; sq[j] += v * v; }
+    for (let b = 0; b < BANDS_N; b += 1) power[b] += Math.exp(frames[f * stride + MFCC_N + b]);
+  }
   for (let j = 0; j < stride; j += 1) { mean[j] /= keep.length; sq[j] = Math.sqrt(Math.max(0, sq[j] / keep.length - mean[j] * mean[j])); }
-  const toDb = 10 / Math.LN10;
   return {
     seconds: mono.length / o.rate, frames: n, audibleFrames: keep.length,
     mfccMean: Array.from(mean.slice(1, MFCC_N)), mfccStd: Array.from(sq.slice(1, MFCC_N)),
-    bandsDb: Array.from({ length: BANDS_N }, (_, b) => mean[MFCC_N + b] * toDb), opts: o,
+    // Long-term average spectrum: mean energy per band (power domain), in dB. Robust to near-silent passages.
+    bandsDb: Array.from(power, (e) => 10 * Math.log10(e / keep.length + 1e-30)), opts: o,
   };
 }
 
