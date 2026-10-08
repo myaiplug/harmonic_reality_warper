@@ -449,6 +449,37 @@
             }
         }
 
+        // Export FLAC: the same offline render as Export WAV, encoded losslessly as 16-bit FLAC in a Web Worker
+        // (flac by wavey-ai, Apache-2.0, via wavey-warper.js). Decodes to exactly the samples Export WAV writes.
+        // eslint-disable-next-line no-unused-vars
+        async function downloadProcessedFlac() {
+            if(demoMode || !currentFileArrayBuffer) {
+                alert("Please upload your own audio file to enable download.");
+                return;
+            }
+            if (!window.WaveyWarper || typeof window.WaveyWarper.encodeFlac !== "function") { statusText.innerText = "FLAC EXPORT UNAVAILABLE - USE EXPORT WAV"; return; }
+            if(!audioCtx) initAudio();
+            const prevStatus = statusText.innerText;
+            statusText.innerText = "RENDERING...";
+            try {
+                const audioBuffer = await decodeInputForExport();
+                const renderedBuffer = await renderProcessedBuffer(audioBuffer);
+                statusText.innerText = "ENCODING FLAC...";
+                const flacBlob = await window.WaveyWarper.encodeFlac(renderedBuffer);
+                const url = URL.createObjectURL(flacBlob);
+                const a = document.createElement('a');
+                a.style.display = 'none'; a.href = url; a.download = "master_output.flac";
+                document.body.appendChild(a); a.click();
+                setTimeout(() => { window.URL.revokeObjectURL(url); document.body.removeChild(a); }, 1000);
+                const wavBytes = 44 + renderedBuffer.length * renderedBuffer.numberOfChannels * 2;
+                statusText.innerText = "FLAC EXPORT COMPLETE · " + (flacBlob.size / 1048576).toFixed(1) + " MB (" + Math.round(flacBlob.size / wavBytes * 100) + "% OF WAV)";
+                window.WaveyWarper.showOutput(renderedBuffer);
+                setTimeout(() => { statusText.innerText = prevStatus; }, 4000);
+            } catch (e) {
+                console.error(e); statusText.innerText = "FLAC EXPORT ERROR - USE EXPORT WAV";
+            }
+        }
+
         function bufferToWave(abuffer, len) {
             const numOfChan = abuffer.numberOfChannels;
             const length = len * numOfChan * 2 + 44;

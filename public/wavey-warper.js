@@ -1,7 +1,8 @@
 // Spectral Space Designer add-on: wider local file import (soundkit-wasm) and a
 // mel-spec spectrogram of input vs warped output. Uses soundkit / mel-spec by wavey-ai (MIT).
+// Export FLAC: lossless 16-bit FLAC of the export render. Uses flac by wavey-ai (Apache-2.0).
 // Additive only: the original <audio> + decodeAudioData path stays primary; nothing is uploaded.
-import { decodeAudioFile, computeMel, drawMel, toMono } from "./vendor/wavey/wavey-audio.js";
+import { decodeAudioFile, computeMel, drawMel, toMono, encodeFlac } from "./vendor/wavey/wavey-audio.js";
 
 const panel = document.getElementById("spectralCompare");
 const inputCanvas = document.getElementById("melInput");
@@ -51,8 +52,11 @@ function wav16(buffer) {
   return new Blob([out.buffer], { type: "audio/wav" });
 }
 
+const flacBtn = document.getElementById("flacBtn");
+
 async function onFile(file) {
   const mine = ++token;
+  if (flacBtn) flacBtn.disabled = false;
   inputBuffer = null; inputMel = null; outputMel = null; window.waveyFallbackBuffer = null;
   if (panel) panel.hidden = false;
   if (compareBtn) compareBtn.disabled = true;
@@ -104,7 +108,10 @@ async function compare() {
 }
 if (compareBtn) compareBtn.addEventListener("click", compare);
 
-window.WaveyWarper = { onFile, showOutput, getInputBuffer: () => inputBuffer };
+// 16-bit with truncation, matching script.js bufferToWave() so FLAC decodes to the WAV export's exact samples.
+const exportFlac = (buffer) => encodeFlac(buffer, { bits: 16, level: 1, quantize: "trunc" });
+
+window.WaveyWarper = { onFile, showOutput, getInputBuffer: () => inputBuffer, encodeFlac: exportFlac };
 // A file may have been chosen before this module finished loading.
 const picker = document.getElementById("audioFile");
 if (picker && picker.files && picker.files[0]) onFile(picker.files[0]);

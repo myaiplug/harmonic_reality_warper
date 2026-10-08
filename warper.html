@@ -40,6 +40,7 @@
                 <input type="file" id="audioFile" accept="audio/*,video/mp4,video/quicktime,video/webm,.wav,.mp3,.m4a,.aac,.flac,.aif,.aiff,.ogg,.opus,.webm,.mp4,.mov,.caf">
                 <button class="btn-metallic" id="playBtn" onclick="togglePlay()">Engage</button>
                 <button class="btn-metallic" id="downloadBtn" onclick="downloadProcessedAudio()" disabled>Export WAV</button>
+                <button class="btn-metallic" id="flacBtn" onclick="downloadProcessedFlac()" disabled title="Same render as Export WAV, lossless FLAC (about half the size). Encoded locally by flac (wavey-ai, Apache-2.0).">Export FLAC</button>
             </div>
             <div class="status-display" id="statusText">DEMO MODE - UPLOAD AUDIO TO ENABLE DOWNLOAD</div>
         </div>
@@ -135,7 +136,7 @@
             <div class="spectral-row"><span class="engraved-label-sm">INPUT</span><canvas id="melInput" width="720" height="72"></canvas></div>
             <div class="spectral-row"><span class="engraved-label-sm">WARPED</span><canvas id="melOutput" width="720" height="72"></canvas></div>
             <div class="recipe-desc" id="melNote"></div>
-            <div class="wavey-credit">Uses <a href="https://github.com/wavey-ai/soundkit" target="_blank" rel="noopener">soundkit</a> / <a href="https://github.com/wavey-ai/mel-spec" target="_blank" rel="noopener">mel-spec</a> by wavey-ai (MIT)</div>
+            <div class="wavey-credit">Uses <a href="https://github.com/wavey-ai/soundkit" target="_blank" rel="noopener">soundkit</a> / <a href="https://github.com/wavey-ai/mel-spec" target="_blank" rel="noopener">mel-spec</a> by wavey-ai (MIT) · Uses <a href="https://github.com/wavey-ai/flac" target="_blank" rel="noopener">flac</a> by wavey-ai (Apache-2.0)</div>
         </div>
 
         <!-- 7-Band Parametric EQ Controls -->
